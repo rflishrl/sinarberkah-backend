@@ -1,0 +1,32 @@
+# PostgreSQL untuk pengembangan lokal.
+#   npm run db:up      -> nyalakan database (menunggu sampai siap)
+#   npm run db:migrate -> buat tabel
+#   npm run db:down    -> matikan database (data tetap tersimpan di volume)
+#
+# Nilai bawaan di bawah hanya untuk komputer sendiri. Jangan dipakai di server publik.
+# Untuk mengubahnya, buat file `.env` di folder ini (contoh: POSTGRES_PASSWORD=rahasia),
+# lalu samakan DATABASE_URL di `.env.local`.
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: sinarberkah-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sinarberkah}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sinarberkah_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-sinarberkah}
+    ports:
+      # Hanya bisa dijangkau dari komputer ini (bukan dari jaringan).
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - sinarberkah_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+volumes:
+  sinarberkah_pgdata:
