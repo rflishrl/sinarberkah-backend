@@ -16,7 +16,8 @@ const envSchema = z.object({
       "harus berupa URL PostgreSQL (postgres://...)",
     ),
   AUTH_SECRET: z.string().min(32, "minimal 32 karakter"),
-  ADMIN_EMAIL: z.email("harus berupa alamat email"),
+  // Email admin: wajib berformat email lengkap dengan domain (mis. admin@sinarberkah.com).
+  ADMIN_EMAIL: z.email("harus berupa alamat email dengan domain"),
   ADMIN_PASSWORD_HASH: z
     .string()
     .startsWith("scrypt.", "belum dibuat (jalankan: npm run hash-password)"),

@@ -5,9 +5,9 @@ import { randomBytes, scryptSync } from "node:crypto";
 
 const password = process.argv[2];
 
-if (!password || password.length < 10) {
+if (!password || password.length < 6) {
   console.error('Pemakaian: npm run hash-password -- "password-anda"');
-  console.error("Password minimal 10 karakter.");
+  console.error("Password minimal 6 karakter.");
   process.exit(1);
 }
 

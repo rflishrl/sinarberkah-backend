@@ -1,140 +1,140 @@
-# Sinar Berkah Backend
+# Sinar Berkah backend
 
-Backend dan panel admin untuk website Sinar Berkah. Dipakai untuk mengelola **produk**, **portofolio**, dan **galeri pola**. Data disimpan di PostgreSQL, foto disimpan di Vercel Blob.
+Backend and admin panel for the Sinar Berkah website. You use it to manage products, portfolio projects, and the pattern gallery. Text data lives in PostgreSQL and photos live in Vercel Blob.
 
-- **Stack:** Next.js 16 (App Router), TypeScript, Tailwind CSS 4, PostgreSQL (Drizzle ORM), Zod, Vercel Blob
-- **Panel admin:** `/admin` (login dulu di `/login`)
-- **API:** `/api/...` (dibaca publik, diubah hanya oleh admin)
+- Stack: Next.js 16 (App Router), TypeScript, Tailwind CSS 4, PostgreSQL with Drizzle ORM, Zod, Vercel Blob
+- Admin panel: `/admin` (sign in at `/login`)
+- API: `/api/...` (anyone can read, only the admin can write)
 
-## Mulai
+## Getting started
 
-### 1. Pasang paket
+### 1. Install packages
 
 ```bash
 npm install
 ```
 
-### 2. Siapkan PostgreSQL
+### 2. Set up PostgreSQL
 
-**Lokal (Docker Compose)** — disarankan untuk pengembangan. Pastikan Docker Desktop sudah jalan, lalu:
+Local development uses Docker Compose. Start Docker Desktop, then run:
 
 ```bash
-npm run db:up        # nyalakan PostgreSQL (menunggu sampai siap)
+npm run db:up        # starts PostgreSQL and waits until it is ready
 ```
 
-Database berjalan di `localhost:5432` (hanya bisa dijangkau dari komputer ini). Nilai bawaan ada di `docker-compose.yml`:
+The database listens on `localhost:5432` and accepts connections from your computer only. The defaults live in `docker-compose.yml`:
 
-| Pengaturan | Nilai bawaan |
-|---|---|
-| User | `sinarberkah` |
+| Setting  | Default           |
+| -------- | ----------------- |
+| User     | `sinarberkah`     |
 | Password | `sinarberkah_dev` |
-| Database | `sinarberkah` |
-| Port | `5432` |
+| Database | `sinarberkah`     |
+| Port     | `5432`            |
 
-Untuk mengubahnya, buat file `.env` di folder ini, mis. `POSTGRES_PASSWORD=rahasia` atau `POSTGRES_PORT=5433`, lalu samakan `DATABASE_URL` di `.env.local`.
-Data tersimpan di volume Docker `sinarberkah_pgdata`, jadi tetap ada setelah `npm run db:down`.
+To change them, create a `.env` file in this folder (for example `POSTGRES_PASSWORD=secret` or `POSTGRES_PORT=5433`) and update `DATABASE_URL` in `.env.local` to match.
+The data sits in the Docker volume `sinarberkah_pgdata`, so it survives `npm run db:down`.
 
-**Produksi** — pakai PostgreSQL terkelola, mis. [Neon](https://neon.tech) lewat Vercel Marketplace (**Storage > Create > Postgres**), Supabase, atau Railway. Pakai alamat **pooled** (untuk Neon, host mengandung `-pooler`). Salin ke `DATABASE_URL`.
+For production, use a managed PostgreSQL service such as [Neon](https://neon.tech) through the Vercel Marketplace (Storage, then Create, then Postgres), Supabase, or Railway. Use the pooled connection string (on Neon, the host contains `-pooler`) and put it in `DATABASE_URL`.
 
-### 3. Siapkan Vercel Blob (penyimpanan foto)
+### 3. Set up Vercel Blob (photo storage)
 
-1. Di [Vercel Dashboard](https://vercel.com/dashboard) buka **Storage > Create > Blob**.
-2. Salin `BLOB_READ_WRITE_TOKEN` dari tab **.env.local**.
+1. In the [Vercel dashboard](https://vercel.com/dashboard), open Storage, then Create, then Blob.
+2. Copy `BLOB_READ_WRITE_TOKEN` from the `.env.local` tab.
 
-Tanpa token ini unggah foto tidak aktif, tetapi Anda masih bisa menempel URL foto.
+Without the token, photo upload does not work. You can still add items by pasting a photo URL.
 
-### 4. Isi file `.env.local`
+### 4. Fill in `.env.local`
 
 ```bash
 copy .env.example .env.local      # Windows
 # cp .env.example .env.local      # macOS / Linux
 ```
 
-| Variabel | Isi |
-|---|---|
-| `DATABASE_URL` | Connection string PostgreSQL (nilai bawaan cocok dengan Docker Compose) |
-| `BLOB_READ_WRITE_TOKEN` | Token Vercel Blob |
-| `AUTH_SECRET` | Teks acak minimal 32 karakter |
-| `ADMIN_EMAIL` | Email untuk login admin |
-| `ADMIN_PASSWORD_HASH` | Hash password admin (lihat di bawah) |
-| `ALLOWED_ORIGINS` | Alamat frontend yang boleh membaca API dari browser, pisahkan dengan koma |
+| Variable                | Value                                                                          |
+| ----------------------- | ------------------------------------------------------------------------------ |
+| `DATABASE_URL`          | PostgreSQL connection string (the default matches Docker Compose)              |
+| `BLOB_READ_WRITE_TOKEN` | Vercel Blob token                                                              |
+| `AUTH_SECRET`           | Random text, at least 32 characters                                            |
+| `ADMIN_EMAIL`           | The admin email. It must include a domain, for example `admin@sinarberkah.com` |
+| `ADMIN_PASSWORD_HASH`   | Hash of the admin password (see below)                                         |
+| `ALLOWED_ORIGINS`       | Frontend addresses allowed to read the API from a browser, separated by commas |
 
-Membuat `AUTH_SECRET`:
+Generate `AUTH_SECRET`:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-Membuat `ADMIN_PASSWORD_HASH` (password minimal 10 karakter):
+Generate `ADMIN_PASSWORD_HASH` (the password needs at least 6 characters):
 
 ```bash
-npm run hash-password -- "password-anda"
+npm run hash-password -- "your-password"
 ```
 
-Salin baris `ADMIN_PASSWORD_HASH=...` yang tercetak ke `.env.local`.
+Copy the printed `ADMIN_PASSWORD_HASH=...` line into `.env.local`. Write values without quotes.
 
-### 5. Buat tabel
+### 5. Create the tables
 
 ```bash
 npm run db:migrate
 ```
 
-### 6. Jalankan
+### 6. Run it
 
 ```bash
 npm run dev
 ```
 
-Buka [http://localhost:3000](http://localhost:3000), lalu masuk dengan `ADMIN_EMAIL` dan password Anda.
+Open [http://localhost:3000](http://localhost:3000) and sign in with `ADMIN_EMAIL` and your password.
 
-> Frontend (`sinarberkah-plato`) juga memakai port 3000. Jalankan salah satunya di port lain, mis. `npm run dev -- -p 4000`.
+The frontend (`sinarberkah-plato`) also uses port 3000. Run one of them on another port, for example `npm run dev -- -p 4000`.
 
-## Perintah
+## Commands
 
-| Perintah | Fungsi |
-|---|---|
-| `npm run dev` | Server pengembangan |
-| `npm run build` / `npm run start` | Build dan jalankan produksi |
-| `npm run lint` | Cek kode |
-| `npm run typecheck` | Cek tipe TypeScript |
-| `npm run hash-password -- "..."` | Buat hash password admin |
-| `npm run db:up` / `npm run db:down` | Nyalakan / matikan PostgreSQL lokal (Docker) |
-| `npm run db:migrate` | Terapkan migrasi ke database |
-| `npm run db:generate` | Buat file migrasi baru setelah `src/db/schema.ts` diubah |
-| `npm run db:studio` | Buka Drizzle Studio untuk melihat isi tabel |
+| Command                             | What it does                                                |
+| ----------------------------------- | ----------------------------------------------------------- |
+| `npm run dev`                       | Starts the development server                               |
+| `npm run build` / `npm run start`   | Builds and runs the production server                       |
+| `npm run lint`                      | Checks the code                                             |
+| `npm run typecheck`                 | Checks TypeScript types                                     |
+| `npm run hash-password -- "..."`    | Creates the admin password hash                             |
+| `npm run db:up` / `npm run db:down` | Starts or stops the local PostgreSQL (Docker)               |
+| `npm run db:migrate`                | Applies migrations to the database                          |
+| `npm run db:generate`               | Creates a new migration after you change `src/db/schema.ts` |
+| `npm run db:studio`                 | Opens Drizzle Studio to browse the tables                   |
 
 ## API
 
-Semua respons berbentuk `{ "data": ... }`. Daftar juga memuat `meta` (`total`, `page`, `limit`, `totalPages`). Error berbentuk `{ "error": { "message": "...", "details": { "fieldErrors": {...} } } }`.
+Every response has the shape `{ "data": ... }`. Lists also include `meta` (`total`, `page`, `limit`, `totalPages`). Errors look like `{ "error": { "message": "...", "details": { "fieldErrors": {...} } } }`.
 
-| Metode | Alamat | Fungsi | Akses |
-|---|---|---|---|
-| GET | `/api/products/v1` | Daftar produk aktif | Publik |
-| GET | `/api/products/v1/{id}` | Detail produk | Publik |
-| POST | `/api/products/v1` | Tambah produk | Admin |
-| PUT / PATCH | `/api/products/v1/{id}` | Ubah produk (kolom yang dikirim saja) | Admin |
-| DELETE | `/api/products/v1/{id}` | Hapus produk dan fotonya | Admin |
-| GET | `/api/gallery/v1/portfolio` | Daftar portofolio | Publik |
-| POST, PUT, PATCH, DELETE | `/api/gallery/v1/portfolio[/{id}]` | Kelola portofolio | Admin |
-| GET | `/api/gallery/v1` | Daftar galeri pola | Publik |
-| POST, PUT, PATCH, DELETE | `/api/gallery/v1[/{id}]` | Kelola pola | Admin |
-| POST | `/api/upload` | Unggah foto (`multipart/form-data`: `file`, `folder`) | Admin |
-| POST | `/api/auth/login`, `/api/auth/logout` | Masuk / keluar | - |
-| GET | `/api/health` | Cek server hidup | Publik |
+| Method                   | Path                                  | Purpose                                                         | Access |
+| ------------------------ | ------------------------------------- | --------------------------------------------------------------- | ------ |
+| GET                      | `/api/products/v1`                    | List active products                                            | Public |
+| GET                      | `/api/products/v1/{id}`               | Get one product                                                 | Public |
+| POST                     | `/api/products/v1`                    | Add a product                                                   | Admin  |
+| PUT / PATCH              | `/api/products/v1/{id}`               | Update a product (only the fields you send)                     | Admin  |
+| DELETE                   | `/api/products/v1/{id}`               | Delete a product and its photo                                  | Admin  |
+| GET                      | `/api/gallery/v1/portfolio`           | List portfolio projects                                         | Public |
+| POST, PUT, PATCH, DELETE | `/api/gallery/v1/portfolio[/{id}]`    | Manage portfolio projects                                       | Admin  |
+| GET                      | `/api/gallery/v1`                     | List patterns                                                   | Public |
+| POST, PUT, PATCH, DELETE | `/api/gallery/v1[/{id}]`              | Manage patterns                                                 | Admin  |
+| POST                     | `/api/upload`                         | Upload a photo (`multipart/form-data` with `file` and `folder`) | Admin  |
+| POST                     | `/api/auth/login`, `/api/auth/logout` | Sign in and out                                                 | None   |
+| GET                      | `/api/health`                         | Check that the server is up                                     | Public |
 
-Parameter daftar: `?page=1&limit=50&q=kata`. `limit` maksimal 100.
+List parameters: `?page=1&limit=50&q=keyword`. The maximum `limit` is 100.
 
-Alamat `/api/gallery/v1` dan `/api/gallery/v1/portfolio` sama dengan yang sudah dipanggil frontend, jadi frontend langsung jalan.
+The frontend already calls `/api/gallery/v1` and `/api/gallery/v1/portfolio`, so it works with this backend without changes.
 
-### Bentuk data
+### Data shapes
 
-Produk:
+Product:
 
 ```json
 {
   "_id": "0b6c1c0e-5c0a-4a53-9d6e-2f4f6f0a1b2c",
-  "name": "Pagar Motif Daun",
-  "category": "Pagar",
+  "name": "Leaf Pattern Gate",
+  "category": "Gate",
   "description": "",
   "price": 1500000,
   "image": { "image_url": "https://....public.blob.vercel-storage.com/..." },
@@ -144,111 +144,125 @@ Produk:
 }
 ```
 
-Portofolio dan pola:
+Portfolio project and pattern:
 
 ```json
 {
   "_id": "0b6c1c0e-5c0a-4a53-9d6e-2f4f6f0a1b2c",
   "kind": "portfolio",
-  "title": "Pagar balkon motif daun",
-  "type": "Pagar",
+  "title": "Balcony fence with leaf pattern",
+  "type": "Fence",
   "description": "",
   "image": { "image_url": "https://..." }
 }
 ```
 
-Saat mengirim data (POST/PUT), foto dikirim sebagai `image_url` (URL `https`):
+When you send data with POST or PUT, pass the photo as `image_url` (an `https` URL):
 
 ```json
-{ "title": "Pola LC 071", "type": "LC 071", "description": "", "image_url": "https://..." }
+{
+  "title": "Pattern LC 071",
+  "type": "LC 071",
+  "description": "",
+  "image_url": "https://..."
+}
 ```
 
-### Menyambungkan ke frontend
+### Connecting the frontend
 
-Di proyek frontend, isi `API_BASE_URL` dengan alamat backend ini (tanpa `/` di akhir), mis. `API_BASE_URL=https://sinarberkah-backend.vercel.app`.
-Frontend membaca data di server dan menyimpannya 1 jam, jadi perubahan dari panel admin tampil dalam ±1 jam.
+In the frontend project, set `API_BASE_URL` to this backend's address without a trailing slash, for example `API_BASE_URL=https://sinarberkah-backend.vercel.app`.
+The frontend reads data on the server and caches it for one hour, so changes made in the admin panel show up within about an hour.
 
-## Keamanan
+## Security
 
-- Perubahan data hanya lewat sesi admin (cookie `httpOnly`, `sameSite=lax`, berlaku 7 hari).
-- Permintaan ubah-data dicek asalnya (`Origin` harus sama dengan host) untuk mencegah CSRF.
-- Password admin disimpan sebagai hash `scrypt`, tidak pernah sebagai teks biasa.
-- Login dibatasi 8 percobaan per 10 menit per IP. Batas ini ada di memori server, jadi di Vercel hanya berlaku per instance. Untuk perlindungan penuh aktifkan Vercel Firewall.
-- Unggah foto dicek tipe, ukuran (maks 4 MB), dan isi file (JPG, PNG, WebP).
-- Hanya ada satu akun admin (dari variabel lingkungan). Jangan commit `.env.local`.
+- Only a signed-in admin can change data. The session is an `httpOnly` cookie with `sameSite=lax` that lasts 7 days.
+- Requests that change data must come from the same host (`Origin` is checked), which blocks CSRF.
+- The admin password is stored as a `scrypt` hash, never as plain text.
+- Login allows 8 attempts per 10 minutes per IP. The counter lives in server memory, so on Vercel it applies per instance only. Turn on Vercel Firewall for full protection.
+- Uploads are checked for type, size (4 MB maximum), and file content (JPG, PNG, WebP).
+- There is one admin account, defined by environment variables. Never commit `.env.local`.
 
-## Deploy ke Vercel
+## Deploying to Vercel
 
-Backend dan frontend adalah **dua proyek Vercel yang terpisah**. Deploy backend dulu, karena alamatnya dibutuhkan frontend.
-Keduanya sudah memakai wilayah Singapura (`sin1`) lewat `vercel.json`, paling dekat ke Indonesia.
+The backend and the frontend are two separate Vercel projects. Deploy the backend first, because the frontend needs its address.
+Both projects run in Singapore (`sin1`) through `vercel.json`, the closest region to Indonesia.
 
-### 1. Push ke GitHub
+### 1. Push to GitHub
 
-Buat dua repositori (backend dan frontend), lalu push masing-masing. Pastikan `.env.local` tidak ikut (sudah ada di `.gitignore`).
+Create two repositories (backend and frontend) and push each one. Check that `.env.local` stays out of the commit. `.gitignore` already excludes it.
 
 ### 2. Backend
 
-1. Di [vercel.com/new](https://vercel.com/new) impor repositori backend. Framework terdeteksi otomatis sebagai Next.js.
-2. Buka **Storage** pada proyek, lalu:
-   - **Create > Postgres** (Neon via Marketplace). Pilih wilayah **Singapore** agar dekat dengan fungsi. Ini mengisi `DATABASE_URL` dan `POSTGRES_URL` otomatis.
-   - **Create > Blob**. Ini mengisi `BLOB_READ_WRITE_TOKEN` otomatis. Pilih **Public**.
-3. Buka **Settings > Environment Variables** dan tambahkan sendiri:
+1. Import the backend repository at [vercel.com/new](https://vercel.com/new). Vercel detects Next.js on its own.
+2. Add these variables before the first deploy, or right after it:
 
-   | Variabel | Isi |
-   |---|---|
-   | `AUTH_SECRET` | Teks acak minimal 32 karakter (lihat langkah 4 di bagian Mulai) |
-   | `ADMIN_EMAIL` | Email admin |
-   | `ADMIN_PASSWORD_HASH` | Hasil `npm run hash-password -- "password-anda"` |
-   | `ALLOWED_ORIGINS` | Alamat frontend produksi, mis. `https://sinarberkah.vercel.app` (isi setelah frontend jadi) |
+   | Variable              | Value                                                                                                       |
+   | --------------------- | ----------------------------------------------------------------------------------------------------------- |
+   | `AUTH_SECRET`         | Random text, at least 32 characters                                                                         |
+   | `ADMIN_EMAIL`         | Admin email with a domain, for example `admin@sinarberkah.com`                                              |
+   | `ADMIN_PASSWORD_HASH` | Output of `npm run hash-password -- "your-password"`                                                        |
+   | `ALLOWED_ORIGINS`     | Production frontend address, for example `https://sinarberkah.vercel.app` (add it once the frontend exists) |
 
-4. Klik **Deploy**.
+3. Open the Storage tab of the project and create two stores:
+   - Postgres (Neon through the Marketplace). Choose the Singapore region and leave Auth off. Connecting it fills in `DATABASE_URL` and `POSTGRES_URL`. Leave the custom prefix empty.
+   - Blob, with Public access. Tick the option that adds a read-write token. This fills in `BLOB_READ_WRITE_TOKEN`.
+4. Redeploy.
 
-Saat build di **Production**, tabel dibuat otomatis (`scripts/vercel-build.mjs` menjalankan `drizzle-kit migrate`).
-Build **Preview** tidak menjalankan migrasi, supaya deploy percobaan tidak mengubah database produksi.
+The first deploy fails at the migration step because the database does not exist yet. That is expected. Once the stores are connected, redeploy and the build succeeds.
 
-Jika Anda mengubah `src/db/schema.ts`: jalankan `npm run db:generate` di komputer, commit folder `drizzle/`, lalu push. Migrasi berjalan pada deploy Production berikutnya.
+On a Production build, `scripts/vercel-build.mjs` runs `drizzle-kit migrate` and creates the tables.
+A Preview build skips migrations, so a test deploy never changes the production database.
+
+If you change `src/db/schema.ts`, run `npm run db:generate`, commit the `drizzle/` folder, and push. The migration runs on the next Production deploy.
 
 ### 3. Frontend
 
-1. Impor repositori frontend di Vercel.
-2. Tambahkan variabel:
+1. Import the frontend repository in Vercel.
+2. Add these variables:
 
-   | Variabel | Isi |
-   |---|---|
-   | `API_BASE_URL` | Alamat backend, mis. `https://sinarberkah-backend.vercel.app` (tanpa `/` di akhir) |
-   | `NEXT_PUBLIC_SITE_URL` | Alamat frontend, mis. `https://sinarberkah.vercel.app` |
+   | Variable               | Value                                                                                     |
+   | ---------------------- | ----------------------------------------------------------------------------------------- |
+   | `API_BASE_URL`         | Backend address, for example `https://sinarberkah-backend.vercel.app` (no trailing slash) |
+   | `NEXT_PUBLIC_SITE_URL` | Frontend address, for example `https://sinarberkah.vercel.app`                            |
 
-3. Klik **Deploy**.
+3. Deploy.
 
-### 4. Setelah keduanya jalan
+### 4. After both projects are live
 
-1. Isi `ALLOWED_ORIGINS` di backend dengan alamat frontend, lalu **Redeploy** backend.
-2. Buka `https://<alamat-backend>/login`, masuk, lalu isi produk, portofolio, dan pola.
-3. Frontend menyimpan data 1 jam. Untuk melihat perubahan segera, **Redeploy** frontend.
+1. Set `ALLOWED_ORIGINS` in the backend to the frontend address, then redeploy the backend.
+2. Open `https://<backend-address>/login`, sign in, and add products, portfolio projects, and patterns.
+3. The frontend caches data for one hour. Redeploy the frontend to see a change right away.
 
-### Lewat terminal (opsional)
+### Troubleshooting
+
+- The login page shows "Terjadi kesalahan" (something went wrong): an environment variable is missing or invalid. Open the Logs tab in Vercel and look for a line starting with `ConfigError`. It names the variable.
+- Vercel refuses to connect Neon because `DATABASE_URL` already exists: delete the old `DATABASE_URL` under Settings, Environment Variables, then connect again.
+- Vercel refuses to create the Blob store because `BLOB_READ_WRITE_TOKEN` already exists: check the Storage tab. If a Blob store is already connected, you are done. If not, delete the variable and create the store again.
+- Do not set a custom prefix to get around either error. It renames the variables, and the backend reads the default names.
+
+### Using the terminal (optional)
 
 ```bash
 npm i -g vercel
 vercel login
-vercel link          # hubungkan folder ini ke proyek Vercel
-vercel env pull .env.local   # salin variabel dari Vercel ke komputer
-vercel --prod        # deploy produksi
+vercel link          # link this folder to a Vercel project
+vercel env pull .env.local   # copy the variables from Vercel to your computer
+vercel --prod        # deploy to production
 ```
 
-`vercel env pull` menimpa `.env.local`. Setelah itu `DATABASE_URL` menunjuk ke database Vercel, jadi pakai dengan hati-hati saat mengembangkan.
+`vercel env pull` overwrites `.env.local`. After that, `DATABASE_URL` points to the Vercel database, so be careful when developing.
 
-## Struktur
+## Project layout
 
 ```
 src/
   app/
-    admin/        Panel admin (dashboard, produk, portofolio, galeri pola)
-    login/        Halaman masuk
-    api/          Endpoint API
+    admin/        Admin panel (dashboard, products, portfolio, pattern gallery)
+    login/        Sign-in page
+    api/          API endpoints
   components/
-    admin/        Form, daftar, kerangka admin
-    ui/           Tombol, kolom isian, pesan
-  db/             Skema tabel (Drizzle)
-  lib/            crud.ts (handler CRUD umum), repositories.ts (akses database), auth.ts, db.ts, blob.ts, validation.ts
+    admin/        Forms, lists, admin shell
+    ui/           Buttons, inputs, messages
+  db/             Table schema (Drizzle)
+  lib/            crud.ts (shared CRUD handlers), repositories.ts (database access), auth.ts, db.ts, blob.ts, validation.ts
 ```
