@@ -4,7 +4,8 @@ import { useRef, useState } from "react";
 import { MdDeleteOutline, MdUploadFile } from "react-icons/md";
 
 import { Button } from "@/components/ui/button";
-import { Field, inputStyles } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
+import { inputStyles } from "@/components/ui/input-styles";
 import { ApiError, uploadPhoto } from "@/lib/client-api";
 
 interface ImageFieldProps {

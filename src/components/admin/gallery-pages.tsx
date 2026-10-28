@@ -44,6 +44,7 @@ export async function GalleryListPage({
       <SearchForm
         defaultValue={params.q}
         placeholder={`Cari ${config.singular}...`}
+        clearHref={config.adminPath}
       />
 
       {items.length === 0 ? (

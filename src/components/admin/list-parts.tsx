@@ -4,8 +4,6 @@ import { MdChevronLeft, MdChevronRight, MdSearch } from "react-icons/md";
 
 import { buttonStyles } from "@/components/ui/button";
 import { Alert } from "@/components/ui/feedback";
-import { inputStyles } from "@/components/ui/field";
-import { cn } from "@/lib/utils";
 
 export function PageHeading({
   title,
@@ -47,17 +45,26 @@ export function NoticeBanner({ notice }: { notice?: string }) {
   );
 }
 
-/** Kolom pencarian berbasis formulir GET, jadi berfungsi tanpa JavaScript. */
+/**
+ * Kolom pencarian berbasis formulir GET, jadi berfungsi tanpa JavaScript.
+ * Di HP kolom dan tombol tersusun ke bawah; di layar lebar sejajar satu baris.
+ */
 export function SearchForm({
   defaultValue,
   placeholder,
+  clearHref,
 }: {
   defaultValue: string;
   placeholder: string;
+  /** Alamat daftar tanpa pencarian, untuk tombol "Hapus pencarian". */
+  clearHref: string;
 }) {
   return (
-    <form role="search" className="mb-4 flex gap-2">
-      <div className="relative flex-1 sm:max-w-sm">
+    <form
+      role="search"
+      className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center"
+    >
+      <div className="relative w-full sm:max-w-md">
         <label htmlFor="q" className="sr-only">
           Cari
         </label>
@@ -72,12 +79,23 @@ export function SearchForm({
           type="search"
           defaultValue={defaultValue}
           placeholder={placeholder}
-          className={cn(inputStyles, "pl-10")}
+          autoComplete="off"
+          className="block min-h-11 w-full rounded-md border border-[#8a8a8a] bg-white py-2 pr-3 pl-10 text-base text-ink placeholder:text-[#767676]"
         />
       </div>
-      <button type="submit" className={buttonStyles("secondary")}>
-        Cari
-      </button>
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          className={buttonStyles("primary", "flex-1 sm:flex-none")}
+        >
+          Cari
+        </button>
+        {defaultValue && (
+          <Link href={clearHref} className={buttonStyles("secondary")}>
+            Hapus pencarian
+          </Link>
+        )}
+      </div>
     </form>
   );
 }

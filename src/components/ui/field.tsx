@@ -4,9 +4,6 @@ import { useId, type ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
-export const inputStyles =
-  "block min-h-11 w-full rounded-md border border-[#8a8a8a] bg-white px-3 py-2 text-base text-ink placeholder:text-[#767676] disabled:bg-surface aria-[invalid=true]:border-danger";
-
 interface FieldProps {
   label: string;
   hint?: string;

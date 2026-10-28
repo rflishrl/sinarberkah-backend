@@ -38,6 +38,7 @@ export default async function ProductsPage({
       <SearchForm
         defaultValue={params.q}
         placeholder="Cari nama atau kategori..."
+        clearHref="/admin/products"
       />
 
       {items.length === 0 ? (

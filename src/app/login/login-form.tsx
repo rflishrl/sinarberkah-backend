@@ -5,7 +5,8 @@ import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/feedback";
-import { Field, inputStyles } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
+import { inputStyles } from "@/components/ui/input-styles";
 import { ApiError, apiRequest } from "@/lib/client-api";
 
 export function LoginForm() {
