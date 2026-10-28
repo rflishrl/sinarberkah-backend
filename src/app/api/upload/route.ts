@@ -1,4 +1,4 @@
-import { uploadImage } from "@/lib/blob";
+import { UPLOAD_PREFIX, uploadImage } from "@/lib/blob";
 import { HttpError, ok, requireAdmin, route } from "@/lib/http";
 
 const FOLDERS = new Set(["products", "portfolio", "patterns"]);
@@ -18,6 +18,6 @@ export const POST = route(async (request: Request) => {
   if (!FOLDERS.has(folder))
     throw new HttpError(400, "Folder tujuan tidak valid.");
 
-  const url = await uploadImage(file, `sinarberkah/${folder}`);
+  const url = await uploadImage(file, `${UPLOAD_PREFIX}${folder}`);
   return ok({ url }, { status: 201 });
 });

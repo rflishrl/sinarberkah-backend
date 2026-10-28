@@ -9,7 +9,9 @@ import {
   requireAdmin,
   route,
 } from "@/lib/http";
+import { isUuid } from "@/lib/ids";
 import type { Repository } from "@/lib/repositories";
+import { revalidateFrontend } from "@/lib/revalidate";
 
 interface IdContext {
   params: Promise<{ id: string }>;
@@ -29,10 +31,9 @@ interface ResourceConfig<TDto extends ResourceDto, TInput> {
   updateSchema: ZodType<Partial<TInput>>;
   /** Hanya produk/data yang boleh dilihat publik (mis. produk aktif). */
   hasPublicFilter?: boolean;
+  /** Tag cache di frontend yang dibuang saat data ini berubah. */
+  revalidateTags: string[];
 }
-
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function clampInt(
   value: string | null,
@@ -59,7 +60,7 @@ export function createResource<TDto extends ResourceDto, TInput>(
 
   /** Cek format id sebelum menyentuh database, supaya id ngawur langsung dijawab 404. */
   function assertValidId(id: string) {
-    if (!UUID_PATTERN.test(id)) throw notFound();
+    if (!isUuid(id)) throw notFound();
   }
 
   const list = route(async (request: Request) => {
@@ -86,7 +87,9 @@ export function createResource<TDto extends ResourceDto, TInput>(
   const create = route(async (request: Request) => {
     await requireAdmin(request);
     const input = config.createSchema.parse(await readJson(request));
-    return ok(await repository.create(input), { status: 201 });
+    const created = await repository.create(input);
+    revalidateFrontend(config.revalidateTags);
+    return ok(created, { status: 201 });
   });
 
   const get = route(async (request: Request, { params }: IdContext) => {
@@ -110,6 +113,7 @@ export function createResource<TDto extends ResourceDto, TInput>(
     if (result.previous.image.image_url !== result.current.image.image_url) {
       await deleteImage(result.previous.image.image_url);
     }
+    revalidateFrontend(config.revalidateTags);
     return ok(result.current);
   });
 
@@ -122,6 +126,7 @@ export function createResource<TDto extends ResourceDto, TInput>(
     if (!removed) throw notFound();
 
     await deleteImage(removed.image.image_url);
+    revalidateFrontend(config.revalidateTags);
     return ok({ _id: id });
   });
 

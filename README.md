@@ -41,7 +41,7 @@ For production, use a managed PostgreSQL service such as [Neon](https://neon.tec
 1. In the [Vercel dashboard](https://vercel.com/dashboard), open Storage, then Create, then Blob.
 2. Copy `BLOB_READ_WRITE_TOKEN` from the `.env.local` tab.
 
-Without the token, photo upload does not work. You can still add items by pasting a photo URL.
+Without the token, photo upload does not work. The API only accepts photo URLs hosted on Vercel Blob, so use a Blob store for local development too (a separate development store keeps test photos out of production).
 
 ### 4. Fill in `.env.local`
 
@@ -50,14 +50,18 @@ copy .env.example .env.local      # Windows
 # cp .env.example .env.local      # macOS / Linux
 ```
 
-| Variable                | Value                                                                          |
-| ----------------------- | ------------------------------------------------------------------------------ |
-| `DATABASE_URL`          | PostgreSQL connection string (the default matches Docker Compose)              |
-| `BLOB_READ_WRITE_TOKEN` | Vercel Blob token                                                              |
-| `AUTH_SECRET`           | Random text, at least 32 characters                                            |
-| `ADMIN_EMAIL`           | The admin email. It must include a domain, for example `admin@sinarberkah.com` |
-| `ADMIN_PASSWORD_HASH`   | Hash of the admin password (see below)                                         |
-| `ALLOWED_ORIGINS`       | Frontend addresses allowed to read the API from a browser, separated by commas |
+| Variable                | Value                                                                                                |
+| ----------------------- | ---------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`          | PostgreSQL connection string (the default matches Docker Compose)                                    |
+| `BLOB_READ_WRITE_TOKEN` | Vercel Blob token                                                                                    |
+| `AUTH_SECRET`           | Random text, at least 32 characters                                                                  |
+| `SESSION_VERSION`       | Session version (default `1`). Change it to sign out every admin session at once                    |
+| `ADMIN_EMAIL`           | The admin email. It must include a domain, for example `admin@sinarberkah.com`                       |
+| `ADMIN_PASSWORD_HASH`   | Hash of the admin password (see below)                                                               |
+| `ALLOWED_ORIGINS`       | Frontend addresses allowed to read the API from a browser, separated by commas                       |
+| `FRONTEND_URL`          | Frontend address. The backend calls its `/api/revalidate` after every save or delete                 |
+| `REVALIDATE_SECRET`     | Shared secret for that call. Use the same value in the frontend. Leave empty to turn the feature off |
+| `CRON_SECRET`           | Secret for the daily photo cleanup cron. Vercel sends it automatically. Leave empty to turn it off   |
 
 Generate `AUTH_SECRET`:
 
@@ -97,6 +101,7 @@ The frontend (`sinarberkah-plato`) also uses port 3000. Run one of them on anoth
 | `npm run build` / `npm run start`   | Builds and runs the production server                       |
 | `npm run lint`                      | Checks the code                                             |
 | `npm run typecheck`                 | Checks TypeScript types                                     |
+| `npm test`                          | Runs the tests (Vitest, needs Node 22.12+)                  |
 | `npm run hash-password -- "..."`    | Creates the admin password hash                             |
 | `npm run db:up` / `npm run db:down` | Starts or stops the local PostgreSQL (Docker)               |
 | `npm run db:migrate`                | Applies migrations to the database                          |
@@ -121,6 +126,7 @@ Every response has the shape `{ "data": ... }`. Lists also include `meta` (`tota
 | POST                     | `/api/upload`                         | Upload a photo (`multipart/form-data` with `file` and `folder`) | Admin  |
 | POST                     | `/api/auth/login`, `/api/auth/logout` | Sign in and out                                                 | None   |
 | GET                      | `/api/health`                         | Check that the server is up                                     | Public |
+| GET                      | `/api/cron/cleanup-blobs`             | Delete unused photos older than 24 hours (Vercel Cron, daily)   | Cron   |
 
 List parameters: `?page=1&limit=50&q=keyword`. The maximum `limit` is 100.
 
@@ -157,7 +163,7 @@ Portfolio project and pattern:
 }
 ```
 
-When you send data with POST or PUT, pass the photo as `image_url` (an `https` URL):
+When you send data with POST or PUT, pass the photo as `image_url`. It must be a Vercel Blob URL (`https://<store>.public.blob.vercel-storage.com/...`), normally the one `/api/upload` returns:
 
 ```json
 {
@@ -171,15 +177,17 @@ When you send data with POST or PUT, pass the photo as `image_url` (an `https` U
 ### Connecting the frontend
 
 In the frontend project, set `API_BASE_URL` to this backend's address without a trailing slash, for example `API_BASE_URL=https://sinarberkah-backend.vercel.app`.
-The frontend reads data on the server and caches it for one hour, so changes made in the admin panel show up within about an hour.
+The frontend reads data on the server and caches it for one hour. When `FRONTEND_URL` and `REVALIDATE_SECRET` are set, the backend tells the frontend to clear its cache after every save or delete, so changes show up right away. Without them, changes show up within about an hour.
 
 ## Security
 
-- Only a signed-in admin can change data. The session is an `httpOnly` cookie with `sameSite=lax` that lasts 7 days.
+- Only a signed-in admin can change data. The session is an `httpOnly` cookie with `sameSite=lax` that lasts 12 hours. Changing `SESSION_VERSION` revokes every session.
 - Requests that change data must come from the same host (`Origin` is checked), which blocks CSRF.
 - The admin password is stored as a `scrypt` hash, never as plain text.
-- Login allows 8 attempts per 10 minutes per IP. The counter lives in server memory, so on Vercel it applies per instance only. Turn on Vercel Firewall for full protection.
-- Uploads are checked for type, size (4 MB maximum), and file content (JPG, PNG, WebP).
+- Login allows 8 attempts per 10 minutes per IP. The counter lives in PostgreSQL (`rate_limits` table), so it applies across all Vercel instances. A Vercel Firewall rate-limit rule on `/api/auth/login` adds a second layer.
+- Uploads are checked for type, size (4 MB maximum), and file content (JPG, PNG, WebP). Photo URLs must point to Vercel Blob.
+- Photos that were uploaded but never saved (an abandoned form) are deleted by a daily cron after 24 hours.
+- Every response carries security headers (CSP, HSTS, `X-Frame-Options`, `nosniff`), set in `next.config.ts`.
 - There is one admin account, defined by environment variables. Never commit `.env.local`.
 
 ## Deploying to Vercel
@@ -202,6 +210,7 @@ Create two repositories (backend and frontend) and push each one. Check that `.e
    | `ADMIN_EMAIL`         | Admin email with a domain, for example `admin@sinarberkah.com`                                              |
    | `ADMIN_PASSWORD_HASH` | Output of `npm run hash-password -- "your-password"`                                                        |
    | `ALLOWED_ORIGINS`     | Production frontend address, for example `https://sinarberkah.vercel.app` (add it once the frontend exists) |
+   | `CRON_SECRET`         | Random text, at least 16 characters. Vercel uses it to call the daily photo cleanup                         |
 
 3. Open the Storage tab of the project and create two stores:
    - Postgres (Neon through the Marketplace). Choose the Singapore region and leave Auth off. Connecting it fills in `DATABASE_URL` and `POSTGRES_URL`. Leave the custom prefix empty.
@@ -231,7 +240,7 @@ If you change `src/db/schema.ts`, run `npm run db:generate`, commit the `drizzle
 
 1. Set `ALLOWED_ORIGINS` in the backend to the frontend address, then redeploy the backend.
 2. Open `https://<backend-address>/login`, sign in, and add products, portfolio projects, and patterns.
-3. The frontend caches data for one hour. Redeploy the frontend to see a change right away.
+3. Set `FRONTEND_URL` (the frontend address) and `REVALIDATE_SECRET` in the backend, and the same `REVALIDATE_SECRET` in the frontend. Then a change in the admin panel shows up right away. Without them, the frontend caches data for one hour.
 
 ### Troubleshooting
 

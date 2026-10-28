@@ -1,6 +1,9 @@
-import { del, put } from "@vercel/blob";
+import { del, list, put } from "@vercel/blob";
 
 import { HttpError } from "@/lib/http";
+
+/** Semua foto unggahan disimpan di bawah awalan ini. */
+export const UPLOAD_PREFIX = "sinarberkah/";
 
 const MAX_BYTES = 4 * 1024 * 1024; // Vercel membatasi body fungsi ±4,5 MB.
 
@@ -81,4 +84,41 @@ export async function deleteImage(url: string | undefined): Promise<void> {
   } catch (error) {
     console.error("[blob] Gagal menghapus foto lama:", error);
   }
+}
+
+/**
+ * Menghapus foto yatim: foto di bawah `UPLOAD_PREFIX` yang tidak dipakai data mana pun
+ * dan diunggah sebelum `olderThan`. Foto yatim muncul saat admin mengunggah foto lalu
+ * membatalkan form, atau mengganti foto beberapa kali sebelum menyimpan.
+ * Batas umur memberi waktu bagi form yang sedang diisi.
+ */
+export async function deleteOrphanImages(
+  referenced: ReadonlySet<string>,
+  olderThan: Date,
+): Promise<{ scanned: number; deleted: number }> {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    throw new HttpError(
+      503,
+      "Penyimpanan foto belum dikonfigurasi (BLOB_READ_WRITE_TOKEN).",
+    );
+  }
+
+  const orphans: string[] = [];
+  let scanned = 0;
+  let cursor: string | undefined;
+  do {
+    const page = await list({ prefix: UPLOAD_PREFIX, cursor, limit: 1000 });
+    for (const blob of page.blobs) {
+      scanned += 1;
+      if (blob.uploadedAt < olderThan && !referenced.has(blob.url)) {
+        orphans.push(blob.url);
+      }
+    }
+    cursor = page.hasMore ? page.cursor : undefined;
+  } while (cursor);
+
+  for (let i = 0; i < orphans.length; i += 100) {
+    await del(orphans.slice(i, i + 100));
+  }
+  return { scanned, deleted: orphans.length };
 }

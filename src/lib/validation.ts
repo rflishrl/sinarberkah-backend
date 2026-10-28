@@ -1,8 +1,18 @@
 import { z } from "zod";
 
-/** URL gambar: harus https. Untuk produk boleh kosong (tanpa gambar). */
+/**
+ * URL gambar: hanya foto di Vercel Blob (hasil unggah lewat `/api/upload`).
+ * Host lain ditolak supaya frontend selalu bisa mengoptimasi gambarnya dan
+ * tidak ada foto yang bergantung pada situs pihak ketiga. Untuk produk boleh kosong.
+ */
+export const BLOB_HOSTNAME = /^[a-z0-9-]+\.public\.blob\.vercel-storage\.com$/;
+
 const httpsUrl = z
-  .url({ protocol: /^https$/, error: "Harus berupa URL https yang valid." })
+  .url({
+    protocol: /^https$/,
+    hostname: BLOB_HOSTNAME,
+    error: "Foto harus diunggah lewat tombol Pilih foto (alamat Vercel Blob).",
+  })
   .max(2048);
 
 const optionalHttpsUrl = z.union([z.literal(""), httpsUrl]);

@@ -39,7 +39,9 @@ export function ProductForm({ product }: { product?: ProductDto }) {
       category,
       description,
       price: price === "" ? undefined : Number(price),
-      image_url: imageUrl,
+      // Foto hanya dikirim jika berubah, supaya produk lama yang fotonya di luar
+      // Vercel Blob tetap bisa disunting tanpa harus mengganti foto.
+      ...(product?.image.image_url === imageUrl ? {} : { image_url: imageUrl }),
       isActive,
     };
 

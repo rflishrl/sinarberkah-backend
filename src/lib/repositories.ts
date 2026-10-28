@@ -97,26 +97,31 @@ export const productsRepository: Repository<ProductDto, ProductInput> = {
   },
 
   async update(id, input) {
-    const db = getDb();
-    const [before] = await db
-      .select()
-      .from(products)
-      .where(eq(products.id, id))
-      .limit(1);
-    if (!before) return null;
+    // Baris dikunci (FOR UPDATE) selama transaksi, jadi dua penyimpanan bersamaan
+    // berjalan bergiliran dan foto lama yang dihapus selalu foto yang benar.
+    return getDb().transaction(async (tx) => {
+      const [before] = await tx
+        .select()
+        .from(products)
+        .where(eq(products.id, id))
+        .for("update");
+      if (!before) return null;
 
-    const values = productValues(input);
-    const [after] =
-      Object.keys(values).length === 0
-        ? [before]
-        : await db
-            .update(products)
-            .set(values)
-            .where(eq(products.id, id))
-            .returning();
-    return after
-      ? { previous: toProductDto(before), current: toProductDto(after) }
-      : null;
+      const values = productValues(input);
+      if (Object.keys(values).length === 0) {
+        const unchanged = toProductDto(before);
+        return { previous: unchanged, current: unchanged };
+      }
+
+      const [after] = await tx
+        .update(products)
+        .set(values)
+        .where(eq(products.id, id))
+        .returning();
+      return after
+        ? { previous: toProductDto(before), current: toProductDto(after) }
+        : null;
+    });
   },
 
   async remove(id) {
@@ -193,29 +198,33 @@ export function galleryRepository(
     },
 
     async update(id, input) {
-      const db = getDb();
-      const [before] = await db
-        .select()
-        .from(galleryItems)
-        .where(and(eq(galleryItems.id, id), ofKind))
-        .limit(1);
-      if (!before) return null;
+      // Sama seperti produk: baris dikunci selama transaksi.
+      return getDb().transaction(async (tx) => {
+        const [before] = await tx
+          .select()
+          .from(galleryItems)
+          .where(and(eq(galleryItems.id, id), ofKind))
+          .for("update");
+        if (!before) return null;
 
-      const values = galleryValues(input);
-      const [after] =
-        Object.keys(values).length === 0
-          ? [before]
-          : await db
-              .update(galleryItems)
-              .set(values)
-              .where(and(eq(galleryItems.id, id), ofKind))
-              .returning();
-      return after
-        ? {
-            previous: toGalleryItemDto(before),
-            current: toGalleryItemDto(after),
-          }
-        : null;
+        const values = galleryValues(input);
+        if (Object.keys(values).length === 0) {
+          const unchanged = toGalleryItemDto(before);
+          return { previous: unchanged, current: unchanged };
+        }
+
+        const [after] = await tx
+          .update(galleryItems)
+          .set(values)
+          .where(and(eq(galleryItems.id, id), ofKind))
+          .returning();
+        return after
+          ? {
+              previous: toGalleryItemDto(before),
+              current: toGalleryItemDto(after),
+            }
+          : null;
+      });
     },
 
     async remove(id) {
@@ -226,4 +235,18 @@ export function galleryRepository(
       return row ? toGalleryItemDto(row) : null;
     },
   };
+}
+
+// --- Foto yang masih dipakai -----------------------------------------------
+
+/** Semua alamat foto yang masih dipakai produk atau galeri (untuk pembersihan Blob). */
+export async function getReferencedImageUrls(): Promise<Set<string>> {
+  const db = getDb();
+  const [productRows, galleryRows] = await Promise.all([
+    db.select({ url: products.imageUrl }).from(products),
+    db.select({ url: galleryItems.imageUrl }).from(galleryItems),
+  ]);
+  return new Set(
+    [...productRows, ...galleryRows].map((row) => row.url).filter(Boolean),
+  );
 }

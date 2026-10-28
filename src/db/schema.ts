@@ -60,5 +60,15 @@ export const galleryItems = pgTable(
   ],
 );
 
+/**
+ * Penghitung percobaan (mis. login per IP). Disimpan di database, bukan di memori,
+ * supaya batasnya berlaku sama di semua instance serverless.
+ */
+export const rateLimits = pgTable("rate_limits", {
+  key: varchar("key", { length: 200 }).primaryKey(),
+  count: integer("count").notNull(),
+  resetAt: timestamp("reset_at", { withTimezone: true }).notNull(),
+});
+
 export type ProductRow = typeof products.$inferSelect;
 export type GalleryItemRow = typeof galleryItems.$inferSelect;

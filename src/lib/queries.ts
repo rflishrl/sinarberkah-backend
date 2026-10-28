@@ -1,11 +1,21 @@
-import { and, count, desc, eq, ilike, or, type SQL } from "drizzle-orm";
-import type { PgColumn } from "drizzle-orm/pg-core";
+import { count } from "drizzle-orm";
 
 import { galleryItems, products } from "@/db/schema";
 import { getDb } from "@/lib/db";
-import { toGalleryItemDto, toProductDto } from "@/lib/dto";
 import type { GalleryKind } from "@/lib/gallery-config";
+import { isUuid } from "@/lib/ids";
+import {
+  galleryRepository,
+  productsRepository,
+  type Repository,
+} from "@/lib/repositories";
 import type { GalleryItemDto, ProductDto } from "@/types";
+
+/*
+ * Pembacaan data untuk halaman admin. Semua akses database lewat repositori yang sama
+ * dengan API (src/lib/repositories.ts), jadi aturan pencarian dan urutan tidak terduplikasi.
+ * Bedanya hanya: admin melihat semua data (`publicOnly: false`) dan 10 baris per halaman.
+ */
 
 export const PAGE_SIZE = 10;
 
@@ -35,91 +45,45 @@ export interface Paged<T> {
   totalPages: number;
 }
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function search(q: string, columns: PgColumn[]): SQL | undefined {
-  if (!q) return undefined;
-  const pattern = `%${q.replace(/[\\%_]/g, "\\$&")}%`;
-  return or(...columns.map((column) => ilike(column, pattern)));
-}
-
-function totalPages(total: number) {
-  return Math.max(1, Math.ceil(total / PAGE_SIZE));
-}
-
-export async function listProducts({
-  q,
-  page,
-}: ListParams): Promise<Paged<ProductDto>> {
-  const db = getDb();
-  const where = search(q, [products.name, products.category]);
-  const [rows, totals] = await Promise.all([
-    db
-      .select()
-      .from(products)
-      .where(where)
-      .orderBy(desc(products.createdAt))
-      .limit(PAGE_SIZE)
-      .offset((page - 1) * PAGE_SIZE),
-    db.select({ total: count() }).from(products).where(where),
-  ]);
-  const total = totals[0]?.total ?? 0;
+async function listPage<TDto, TInput>(
+  repository: Repository<TDto, TInput>,
+  { q, page }: ListParams,
+): Promise<Paged<TDto>> {
+  const { items, total } = await repository.list({
+    q: q || undefined,
+    limit: PAGE_SIZE,
+    offset: (page - 1) * PAGE_SIZE,
+    publicOnly: false,
+  });
   return {
-    items: rows.map(toProductDto),
+    items,
     total,
-    totalPages: totalPages(total),
+    totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
   };
+}
+
+export function listProducts(params: ListParams): Promise<Paged<ProductDto>> {
+  return listPage(productsRepository, params);
 }
 
 export async function getProduct(id: string): Promise<ProductDto | null> {
-  if (!UUID_PATTERN.test(id)) return null;
-  const [row] = await getDb()
-    .select()
-    .from(products)
-    .where(eq(products.id, id))
-    .limit(1);
-  return row ? toProductDto(row) : null;
+  if (!isUuid(id)) return null;
+  return productsRepository.find(id, { publicOnly: false });
 }
 
-export async function listGallery(
+export function listGallery(
   kind: GalleryKind,
-  { q, page }: ListParams,
+  params: ListParams,
 ): Promise<Paged<GalleryItemDto>> {
-  const db = getDb();
-  const where = and(
-    eq(galleryItems.kind, kind),
-    search(q, [galleryItems.title, galleryItems.type]),
-  );
-  const [rows, totals] = await Promise.all([
-    db
-      .select()
-      .from(galleryItems)
-      .where(where)
-      .orderBy(desc(galleryItems.createdAt))
-      .limit(PAGE_SIZE)
-      .offset((page - 1) * PAGE_SIZE),
-    db.select({ total: count() }).from(galleryItems).where(where),
-  ]);
-  const total = totals[0]?.total ?? 0;
-  return {
-    items: rows.map(toGalleryItemDto),
-    total,
-    totalPages: totalPages(total),
-  };
+  return listPage(galleryRepository(kind), params);
 }
 
 export async function getGalleryItem(
   kind: GalleryKind,
   id: string,
 ): Promise<GalleryItemDto | null> {
-  if (!UUID_PATTERN.test(id)) return null;
-  const [row] = await getDb()
-    .select()
-    .from(galleryItems)
-    .where(and(eq(galleryItems.id, id), eq(galleryItems.kind, kind)))
-    .limit(1);
-  return row ? toGalleryItemDto(row) : null;
+  if (!isUuid(id)) return null;
+  return galleryRepository(kind).find(id, { publicOnly: false });
 }
 
 export async function getCounts() {

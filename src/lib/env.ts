@@ -21,8 +21,12 @@ const envSchema = z.object({
   ADMIN_PASSWORD_HASH: z
     .string()
     .startsWith("scrypt.", "belum dibuat (jalankan: npm run hash-password)"),
+  // Ganti nilainya (mis. "1" -> "2") untuk mengeluarkan semua sesi admin yang sedang aktif.
+  SESSION_VERSION: z.string().trim().min(1).max(64).default("1"),
   BLOB_READ_WRITE_TOKEN: z.string().optional(),
   ALLOWED_ORIGINS: z.string().optional(),
+  // Diisi Vercel Cron di header Authorization. Kosong = endpoint cron mati.
+  CRON_SECRET: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

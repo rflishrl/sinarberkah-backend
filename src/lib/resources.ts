@@ -14,6 +14,7 @@ export const productsResource = createResource({
   createSchema: productInput,
   updateSchema: productUpdateInput,
   hasPublicFilter: true,
+  revalidateTags: ["products"],
 });
 
 /** Portofolio: foto proyek yang pernah dikerjakan. */
@@ -22,6 +23,7 @@ export const portfolioResource = createResource({
   repository: galleryRepository("portfolio"),
   createSchema: galleryInput,
   updateSchema: galleryUpdateInput,
+  revalidateTags: ["portfolio"],
 });
 
 /** Galeri pola ornamen. */
@@ -30,4 +32,5 @@ export const patternsResource = createResource({
   repository: galleryRepository("pattern"),
   createSchema: galleryInput,
   updateSchema: galleryUpdateInput,
+  revalidateTags: ["gallery"],
 });

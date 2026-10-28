@@ -37,7 +37,13 @@ export function GalleryForm({ kind, item }: GalleryFormProps) {
     setFormError(undefined);
     setFieldErrors({});
 
-    const payload = { title, type, description, image_url: imageUrl };
+    const payload = {
+      title,
+      type,
+      description,
+      // Foto hanya dikirim jika berubah (lihat catatan di product-form.tsx).
+      ...(item?.image.image_url === imageUrl ? {} : { image_url: imageUrl }),
+    };
 
     try {
       if (item) {

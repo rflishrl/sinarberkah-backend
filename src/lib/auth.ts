@@ -11,7 +11,7 @@ import { cookies } from "next/headers";
 import { getEnv } from "@/lib/env";
 
 export const SESSION_COOKIE = "sb_session";
-const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 hari
+const SESSION_TTL_SECONDS = 60 * 60 * 12; // 12 jam
 
 function scryptAsync(
   password: BinaryLike,
@@ -26,7 +26,7 @@ function scryptAsync(
 }
 
 /** Perbandingan string dalam waktu tetap (tidak membocorkan panjang atau isi). */
-function safeEqual(a: string, b: string): boolean {
+export function safeEqual(a: string, b: string): boolean {
   const hashA = createHash("sha256").update(a).digest();
   const hashB = createHash("sha256").update(b).digest();
   return timingSafeEqual(hashA, hashB);
@@ -61,9 +61,14 @@ export async function verifyCredentials(
   return passwordOk && emailOk;
 }
 
+/**
+ * Token sesi berisi `ver` (SESSION_VERSION). Token dengan versi lain ditolak, jadi
+ * mengganti SESSION_VERSION mencabut semua sesi tanpa perlu mengganti AUTH_SECRET.
+ */
 export async function createSessionToken(email: string): Promise<string> {
-  const key = new TextEncoder().encode(getEnv().AUTH_SECRET);
-  return new SignJWT({ role: "admin" })
+  const env = getEnv();
+  const key = new TextEncoder().encode(env.AUTH_SECRET);
+  return new SignJWT({ role: "admin", ver: env.SESSION_VERSION })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(email)
     .setIssuedAt()
@@ -77,13 +82,16 @@ export interface Session {
 
 /** Mengembalikan sesi admin yang sah, atau `null` jika belum login / sesi tidak valid. */
 export async function getSession(): Promise<Session | null> {
-  const key = new TextEncoder().encode(getEnv().AUTH_SECRET);
+  const env = getEnv();
+  const key = new TextEncoder().encode(env.AUTH_SECRET);
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
 
   try {
     const { payload } = await jwtVerify(token, key, { algorithms: ["HS256"] });
-    return typeof payload.sub === "string" && payload.role === "admin"
+    return typeof payload.sub === "string" &&
+      payload.role === "admin" &&
+      payload.ver === env.SESSION_VERSION
       ? { email: payload.sub }
       : null;
   } catch {

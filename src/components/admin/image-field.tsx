@@ -111,9 +111,9 @@ export function ImageField({
       )}
 
       <Field
-        label="Atau tempel alamat (URL) foto"
+        label="Atau tempel alamat foto yang sudah diunggah"
         error={error}
-        hint="Dipakai jika foto sudah ada di internet. Harus diawali https://"
+        hint="Hanya alamat Vercel Blob (https://...public.blob.vercel-storage.com/...)."
       >
         {(fieldProps) => (
           <input
