@@ -1,3 +1,4 @@
+import { randomBytes, scryptSync } from "node:crypto";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Cookie palsu pengganti `cookies()` dari next/headers.
@@ -12,6 +13,7 @@ vi.mock("next/headers", () => ({
 }));
 
 const PASSWORD = "rahasia123";
+let currentHash = "";
 
 async function loadAuth() {
   // getEnv() menyimpan env di cache modul, jadi modul dimuat ulang setelah env diubah.
@@ -21,12 +23,42 @@ async function loadAuth() {
 
 beforeAll(async () => {
   const { hashPassword } = await loadAuth();
-  process.env.ADMIN_PASSWORD_HASH = await hashPassword(PASSWORD);
+  currentHash = await hashPassword(PASSWORD);
 });
 
 beforeEach(() => {
   jar.clear();
   process.env.SESSION_VERSION = "1";
+  process.env.ADMIN_PASSWORD_HASH = currentHash;
+});
+
+describe("hash password", () => {
+  it("hash baru menyimpan parameter scrypt", async () => {
+    const { parsePasswordHash } = await loadAuth();
+    expect(currentHash).toMatch(/^scrypt\.16384\.8\.1\.[0-9a-f]+\.[0-9a-f]+$/);
+    expect(parsePasswordHash(currentHash)?.params).toEqual({
+      N: 16384,
+      r: 8,
+      p: 1,
+    });
+  });
+
+  it("hash format lama (tanpa parameter) tetap diterima", async () => {
+    const salt = randomBytes(16);
+    const hash = scryptSync(PASSWORD, salt, 64);
+    process.env.ADMIN_PASSWORD_HASH = `scrypt.${salt.toString("hex")}.${hash.toString("hex")}`;
+    const { verifyCredentials } = await loadAuth();
+    await expect(
+      verifyCredentials("admin@sinarberkah.com", PASSWORD),
+    ).resolves.toBe(true);
+  });
+
+  it("hash yang rusak ditolak", async () => {
+    const { parsePasswordHash } = await loadAuth();
+    expect(parsePasswordHash("scrypt.abc")).toBeNull();
+    expect(parsePasswordHash("scrypt.1000.8.1.aa.bb")).toBeNull(); // N bukan pangkat 2
+    expect(parsePasswordHash("bcrypt.aa.bb")).toBeNull();
+  });
 });
 
 describe("verifyCredentials", () => {

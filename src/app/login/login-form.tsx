@@ -1,51 +1,36 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/feedback";
 import { Field } from "@/components/ui/field";
 import { inputStyles } from "@/components/ui/input-styles";
-import { ApiError, apiRequest } from "@/lib/client-api";
+import { apiRequest } from "@/lib/client-api";
+import { useApiForm } from "@/lib/use-api-form";
 
 export function LoginForm() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string>();
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  const { saving, formError, firstError, submit } = useApiForm();
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSubmitting(true);
-    setError(undefined);
-    setFieldErrors({});
-
-    try {
-      await apiRequest("/api/auth/login", {
-        method: "POST",
-        body: { email, password },
-      });
-      router.push("/admin");
-      router.refresh();
-    } catch (caught) {
-      if (caught instanceof ApiError) {
-        setError(caught.message);
-        setFieldErrors(caught.fieldErrors);
-      } else {
-        setError("Tidak dapat terhubung ke server. Periksa koneksi Anda.");
-      }
-      setSubmitting(false);
-    }
+    void submit(
+      () =>
+        apiRequest("/api/auth/login", {
+          method: "POST",
+          body: { email, password },
+        }),
+      "/admin",
+    );
   }
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-5">
-      {error && <Alert tone="error">{error}</Alert>}
+      {formError && <Alert tone="error">{formError}</Alert>}
 
-      <Field label="Email" required error={fieldErrors.email?.[0]}>
+      <Field label="Email" required error={firstError("email")}>
         {(props) => (
           <input
             {...props}
@@ -58,7 +43,7 @@ export function LoginForm() {
         )}
       </Field>
 
-      <Field label="Password" required error={fieldErrors.password?.[0]}>
+      <Field label="Password" required error={firstError("password")}>
         {(props) => (
           <input
             {...props}
@@ -71,8 +56,8 @@ export function LoginForm() {
         )}
       </Field>
 
-      <Button type="submit" className="w-full" disabled={submitting}>
-        {submitting ? "Memeriksa..." : "Masuk"}
+      <Button type="submit" className="w-full" disabled={saving}>
+        {saving ? "Memeriksa..." : "Masuk"}
       </Button>
     </form>
   );

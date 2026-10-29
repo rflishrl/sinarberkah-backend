@@ -60,7 +60,7 @@ export function route<Args extends unknown[]>(
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 /** Menolak permintaan ubah-data yang berasal dari situs lain (perlindungan CSRF). */
-function assertSameOrigin(request: Request) {
+export function assertSameOrigin(request: Request) {
   const origin = request.headers.get("origin");
   const host = request.headers.get("host");
   let originHost: string | null = null;

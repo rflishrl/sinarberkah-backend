@@ -33,7 +33,15 @@ export const products = pgTable(
     isActive: boolean("is_active").notNull().default(true),
     ...timestamps,
   },
-  (table) => [index("products_created_at_idx").on(table.createdAt)],
+  (table) => [
+    index("products_created_at_idx").on(table.createdAt),
+    // Index trigram untuk pencarian `ILIKE '%kata%'` (butuh ekstensi pg_trgm, dibuat di migrasi).
+    index("products_name_trgm_idx").using("gin", table.name.op("gin_trgm_ops")),
+    index("products_category_trgm_idx").using(
+      "gin",
+      table.category.op("gin_trgm_ops"),
+    ),
+  ],
 );
 
 /**
@@ -57,6 +65,14 @@ export const galleryItems = pgTable(
   },
   (table) => [
     index("gallery_items_kind_created_at_idx").on(table.kind, table.createdAt),
+    index("gallery_items_title_trgm_idx").using(
+      "gin",
+      table.title.op("gin_trgm_ops"),
+    ),
+    index("gallery_items_type_trgm_idx").using(
+      "gin",
+      table.type.op("gin_trgm_ops"),
+    ),
   ],
 );
 

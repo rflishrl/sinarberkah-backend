@@ -165,7 +165,7 @@ describe("get / update / remove", () => {
       current: { ...stored, image: { image_url: NEW_PHOTO } },
     });
     const response = await resource.update(
-      request("PUT", { body: { image_url: NEW_PHOTO } }),
+      request("PATCH", { body: { image_url: NEW_PHOTO } }),
       params(ID),
     );
     expect(response.status).toBe(200);

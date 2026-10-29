@@ -49,7 +49,7 @@ function clampInt(
 /**
  * Membuat satu set handler CRUD (list, create, get, update, remove) di atas sebuah repositori.
  * - Membaca (GET) terbuka untuk publik.
- * - Mengubah data (POST, PUT, PATCH, DELETE) hanya untuk admin yang sudah login.
+ * - Mengubah data (POST, PATCH, DELETE) hanya untuk admin yang sudah login.
  */
 export function createResource<TDto extends ResourceDto, TInput>(
   config: ResourceConfig<TDto, TInput>,

@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 import { ImageField } from "@/components/admin/image-field";
@@ -8,8 +7,9 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { Alert } from "@/components/ui/feedback";
 import { Field } from "@/components/ui/field";
 import { inputStyles } from "@/components/ui/input-styles";
-import { ApiError, apiRequest } from "@/lib/client-api";
+import { apiRequest } from "@/lib/client-api";
 import { GALLERY_CONFIG, type GalleryKind } from "@/lib/gallery-config";
+import { useApiForm } from "@/lib/use-api-form";
 import type { GalleryItemDto } from "@/types";
 
 interface GalleryFormProps {
@@ -20,22 +20,14 @@ interface GalleryFormProps {
 /** Form tambah/ubah untuk Portofolio dan Galeri Pola (bentuk datanya sama). */
 export function GalleryForm({ kind, item }: GalleryFormProps) {
   const config = GALLERY_CONFIG[kind];
-  const router = useRouter();
   const [title, setTitle] = useState(item?.title ?? "");
   const [type, setType] = useState(item?.type ?? "");
   const [description, setDescription] = useState(item?.description ?? "");
   const [imageUrl, setImageUrl] = useState(item?.image.image_url ?? "");
+  const { saving, formError, firstError, submit } = useApiForm();
 
-  const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState<string>();
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
-  const firstError = (key: string) => fieldErrors[key]?.[0];
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSaving(true);
-    setFormError(undefined);
-    setFieldErrors({});
 
     const payload = {
       title,
@@ -45,26 +37,16 @@ export function GalleryForm({ kind, item }: GalleryFormProps) {
       ...(item?.image.image_url === imageUrl ? {} : { image_url: imageUrl }),
     };
 
-    try {
-      if (item) {
-        await apiRequest(`${config.api}/${item._id}`, {
-          method: "PUT",
-          body: payload,
-        });
-      } else {
-        await apiRequest(config.api, { method: "POST", body: payload });
-      }
-      router.push(`${config.adminPath}?notice=${item ? "updated" : "created"}`);
-      router.refresh();
-    } catch (caught) {
-      if (caught instanceof ApiError) {
-        setFormError(caught.message);
-        setFieldErrors(caught.fieldErrors);
-      } else {
-        setFormError("Tidak dapat terhubung ke server. Periksa koneksi Anda.");
-      }
-      setSaving(false);
-    }
+    void submit(
+      () =>
+        item
+          ? apiRequest(`${config.api}/${item._id}`, {
+              method: "PATCH",
+              body: payload,
+            })
+          : apiRequest(config.api, { method: "POST", body: payload }),
+      `${config.adminPath}?notice=${item ? "updated" : "created"}`,
+    );
   }
 
   return (

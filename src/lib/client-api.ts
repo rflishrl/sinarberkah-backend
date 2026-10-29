@@ -29,7 +29,7 @@ async function parse<T>(response: Response): Promise<T> {
 
 export async function apiRequest<T>(
   url: string,
-  options: { method: "POST" | "PUT" | "DELETE"; body?: unknown },
+  options: { method: "POST" | "PATCH" | "DELETE"; body?: unknown },
 ): Promise<T> {
   const response = await fetch(url, {
     method: options.method,

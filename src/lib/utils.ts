@@ -26,8 +26,3 @@ export function formatDate(value: string | Date): string {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "" : dateTime.format(date);
 }
-
-/** Meloloskan karakter khusus regex agar pencarian pengguna diperlakukan sebagai teks biasa. */
-export function escapeRegex(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}

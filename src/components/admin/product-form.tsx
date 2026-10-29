@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 import { ImageField } from "@/components/admin/image-field";
@@ -8,31 +7,24 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { Alert } from "@/components/ui/feedback";
 import { Field } from "@/components/ui/field";
 import { inputStyles } from "@/components/ui/input-styles";
-import { ApiError, apiRequest } from "@/lib/client-api";
+import { apiRequest } from "@/lib/client-api";
+import { useApiForm } from "@/lib/use-api-form";
 import type { ProductDto } from "@/types";
 
 const API = "/api/products/v1";
 const LIST = "/admin/products";
 
 export function ProductForm({ product }: { product?: ProductDto }) {
-  const router = useRouter();
   const [name, setName] = useState(product?.name ?? "");
   const [category, setCategory] = useState(product?.category ?? "");
   const [description, setDescription] = useState(product?.description ?? "");
   const [price, setPrice] = useState(product ? String(product.price) : "");
   const [imageUrl, setImageUrl] = useState(product?.image.image_url ?? "");
   const [isActive, setIsActive] = useState(product?.isActive ?? true);
+  const { saving, formError, firstError, submit } = useApiForm();
 
-  const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState<string>();
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
-  const firstError = (key: string) => fieldErrors[key]?.[0];
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSaving(true);
-    setFormError(undefined);
-    setFieldErrors({});
 
     const payload = {
       name,
@@ -45,26 +37,16 @@ export function ProductForm({ product }: { product?: ProductDto }) {
       isActive,
     };
 
-    try {
-      if (product) {
-        await apiRequest(`${API}/${product._id}`, {
-          method: "PUT",
-          body: payload,
-        });
-      } else {
-        await apiRequest(API, { method: "POST", body: payload });
-      }
-      router.push(`${LIST}?notice=${product ? "updated" : "created"}`);
-      router.refresh();
-    } catch (caught) {
-      if (caught instanceof ApiError) {
-        setFormError(caught.message);
-        setFieldErrors(caught.fieldErrors);
-      } else {
-        setFormError("Tidak dapat terhubung ke server. Periksa koneksi Anda.");
-      }
-      setSaving(false);
-    }
+    void submit(
+      () =>
+        product
+          ? apiRequest(`${API}/${product._id}`, {
+              method: "PATCH",
+              body: payload,
+            })
+          : apiRequest(API, { method: "POST", body: payload }),
+      `${LIST}?notice=${product ? "updated" : "created"}`,
+    );
   }
 
   return (

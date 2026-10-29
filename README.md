@@ -55,7 +55,7 @@ copy .env.example .env.local      # Windows
 | `DATABASE_URL`          | PostgreSQL connection string (the default matches Docker Compose)                                    |
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob token                                                                                    |
 | `AUTH_SECRET`           | Random text, at least 32 characters                                                                  |
-| `SESSION_VERSION`       | Session version (default `1`). Change it to sign out every admin session at once                    |
+| `SESSION_VERSION`       | Session version (default `1`). Change it to sign out every admin session at once                     |
 | `ADMIN_EMAIL`           | The admin email. It must include a domain, for example `admin@sinarberkah.com`                       |
 | `ADMIN_PASSWORD_HASH`   | Hash of the admin password (see below)                                                               |
 | `ALLOWED_ORIGINS`       | Frontend addresses allowed to read the API from a browser, separated by commas                       |
@@ -112,21 +112,21 @@ The frontend (`sinarberkah-plato`) also uses port 3000. Run one of them on anoth
 
 Every response has the shape `{ "data": ... }`. Lists also include `meta` (`total`, `page`, `limit`, `totalPages`). Errors look like `{ "error": { "message": "...", "details": { "fieldErrors": {...} } } }`.
 
-| Method                   | Path                                  | Purpose                                                         | Access |
-| ------------------------ | ------------------------------------- | --------------------------------------------------------------- | ------ |
-| GET                      | `/api/products/v1`                    | List active products                                            | Public |
-| GET                      | `/api/products/v1/{id}`               | Get one product                                                 | Public |
-| POST                     | `/api/products/v1`                    | Add a product                                                   | Admin  |
-| PUT / PATCH              | `/api/products/v1/{id}`               | Update a product (only the fields you send)                     | Admin  |
-| DELETE                   | `/api/products/v1/{id}`               | Delete a product and its photo                                  | Admin  |
-| GET                      | `/api/gallery/v1/portfolio`           | List portfolio projects                                         | Public |
-| POST, PUT, PATCH, DELETE | `/api/gallery/v1/portfolio[/{id}]`    | Manage portfolio projects                                       | Admin  |
-| GET                      | `/api/gallery/v1`                     | List patterns                                                   | Public |
-| POST, PUT, PATCH, DELETE | `/api/gallery/v1[/{id}]`              | Manage patterns                                                 | Admin  |
-| POST                     | `/api/upload`                         | Upload a photo (`multipart/form-data` with `file` and `folder`) | Admin  |
-| POST                     | `/api/auth/login`, `/api/auth/logout` | Sign in and out                                                 | None   |
-| GET                      | `/api/health`                         | Check that the server is up                                     | Public |
-| GET                      | `/api/cron/cleanup-blobs`             | Delete unused photos older than 24 hours (Vercel Cron, daily)   | Cron   |
+| Method              | Path                                  | Purpose                                                         | Access |
+| ------------------- | ------------------------------------- | --------------------------------------------------------------- | ------ |
+| GET                 | `/api/products/v1`                    | List active products                                            | Public |
+| GET                 | `/api/products/v1/{id}`               | Get one product                                                 | Public |
+| POST                | `/api/products/v1`                    | Add a product                                                   | Admin  |
+| PATCH               | `/api/products/v1/{id}`               | Update a product (only the fields you send)                     | Admin  |
+| DELETE              | `/api/products/v1/{id}`               | Delete a product and its photo                                  | Admin  |
+| GET                 | `/api/gallery/v1/portfolio`           | List portfolio projects                                         | Public |
+| POST, PATCH, DELETE | `/api/gallery/v1/portfolio[/{id}]`    | Manage portfolio projects                                       | Admin  |
+| GET                 | `/api/gallery/v1`                     | List patterns                                                   | Public |
+| POST, PATCH, DELETE | `/api/gallery/v1[/{id}]`              | Manage patterns                                                 | Admin  |
+| POST                | `/api/upload`                         | Upload a photo (`multipart/form-data` with `file` and `folder`) | Admin  |
+| POST                | `/api/auth/login`, `/api/auth/logout` | Sign in and out (same-origin requests only)                     | None   |
+| GET                 | `/api/health`                         | Check that the server and the database are up (503 if not)      | Public |
+| GET                 | `/api/cron/cleanup-blobs`             | Delete unused photos older than 24 hours (Vercel Cron, daily)   | Cron   |
 
 List parameters: `?page=1&limit=50&q=keyword`. The maximum `limit` is 100.
 
@@ -163,7 +163,7 @@ Portfolio project and pattern:
 }
 ```
 
-When you send data with POST or PUT, pass the photo as `image_url`. It must be a Vercel Blob URL (`https://<store>.public.blob.vercel-storage.com/...`), normally the one `/api/upload` returns:
+When you send data with POST or PATCH, pass the photo as `image_url`. It must be a Vercel Blob URL (`https://<store>.public.blob.vercel-storage.com/...`), normally the one `/api/upload` returns:
 
 ```json
 {
@@ -182,8 +182,8 @@ The frontend reads data on the server and caches it for one hour. When `FRONTEND
 ## Security
 
 - Only a signed-in admin can change data. The session is an `httpOnly` cookie with `sameSite=lax` that lasts 12 hours. Changing `SESSION_VERSION` revokes every session.
-- Requests that change data must come from the same host (`Origin` is checked), which blocks CSRF.
-- The admin password is stored as a `scrypt` hash, never as plain text.
+- Requests that change data, plus login and logout, must come from the same host (`Origin` is checked), which blocks CSRF.
+- The admin password is stored as a `scrypt` hash, never as plain text. The hash carries its own cost settings (`scrypt.<N>.<r>.<p>.<salt>.<hash>`), so the cost can be raised later without breaking existing hashes. Older `scrypt.<salt>.<hash>` values still work.
 - Login allows 8 attempts per 10 minutes per IP. The counter lives in PostgreSQL (`rate_limits` table), so it applies across all Vercel instances. A Vercel Firewall rate-limit rule on `/api/auth/login` adds a second layer.
 - Uploads are checked for type, size (4 MB maximum), and file content (JPG, PNG, WebP). Photo URLs must point to Vercel Blob.
 - Photos that were uploaded but never saved (an abandoned form) are deleted by a daily cron after 24 hours.

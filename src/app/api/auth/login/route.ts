@@ -3,7 +3,14 @@ import {
   setSessionCookie,
   verifyCredentials,
 } from "@/lib/auth";
-import { getClientIp, HttpError, ok, readJson, route } from "@/lib/http";
+import {
+  assertSameOrigin,
+  getClientIp,
+  HttpError,
+  ok,
+  readJson,
+  route,
+} from "@/lib/http";
 import { rateLimit, resetRateLimit } from "@/lib/rate-limit";
 import { loginInput } from "@/lib/validation";
 
@@ -11,6 +18,9 @@ const MAX_ATTEMPTS = 8;
 const WINDOW_MS = 10 * 60 * 1000;
 
 export const POST = route(async (request: Request) => {
+  // Mencegah situs lain memaksa browser login ke akun penyerang (login CSRF).
+  assertSameOrigin(request);
+
   const limitKey = `login:${getClientIp(request)}`;
   const limit = await rateLimit(limitKey, MAX_ATTEMPTS, WINDOW_MS);
   if (!limit.allowed) {
