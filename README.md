@@ -202,7 +202,7 @@ The frontend reads data on the server and caches it for one hour. When `FRONTEND
 ## Security
 
 - **Database access.** RLS is on for every table. Anyone can read active products and the gallery. Only an admin can write. The rate limit table lives in the `private` schema, which the API does not expose.
-- **Sessions.** Supabase Auth keeps the session in cookies set by `@supabase/ssr`. By default they are not `httpOnly` and last 400 days. The access token lasts 1 hour and `src/proxy.ts` refreshes it. Routes and the admin layout verify the user with `getUser()`, which asks the Auth server, not with the cookie alone.
+- **Sessions.** Supabase Auth keeps the session in cookies set by `@supabase/ssr`. The cookies are `httpOnly`, `secure` (in production), `SameSite=Lax`, and last 7 days. The proxy renews them while the admin stays active. The access token lasts 1 hour and `src/proxy.ts` refreshes it. Settings live in `src/lib/supabase/cookie-options.ts`. Routes and the admin layout verify the user with `getUser()`, which asks the Auth server, not with the cookie alone.
 - **Same origin.** Requests that change data, plus login and logout, must come from the same host (`Origin` is checked). This blocks CSRF.
 - **Rate limits.** Login allows 8 attempts per 10 minutes per IP. Public reads allow 120 per minute per IP. The counters live in Postgres, so they apply across all Vercel instances.
 - **Uploads.** Type, size (4 MB maximum), and file content are checked (JPG, PNG, WebP). Photo URLs must point to Vercel Blob.
