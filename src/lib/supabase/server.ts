@@ -5,6 +5,10 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
 import { getServerEnv } from "@/lib/env";
+import {
+  SESSION_COOKIE_OPTIONS,
+  withSessionLifetime,
+} from "@/lib/supabase/cookie-options";
 import type { Database } from "@/types/database";
 
 export type AppSupabaseClient = SupabaseClient<Database>;
@@ -22,6 +26,7 @@ export async function createSessionClient(): Promise<AppSupabaseClient> {
     env.SUPABASE_URL,
     env.SUPABASE_PUBLISHABLE_KEY,
     {
+      cookieOptions: SESSION_COOKIE_OPTIONS,
       cookies: {
         getAll() {
           return cookieStore.getAll();
@@ -29,7 +34,7 @@ export async function createSessionClient(): Promise<AppSupabaseClient> {
         setAll(cookiesToSet) {
           try {
             for (const { name, value, options } of cookiesToSet) {
-              cookieStore.set(name, value, options);
+              cookieStore.set(name, value, withSessionLifetime(options));
             }
           } catch {
             // Dipanggil dari Server Component yang tidak boleh menulis cookie.

@@ -2,6 +2,10 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getServerEnv } from "@/lib/env";
+import {
+  SESSION_COOKIE_OPTIONS,
+  withSessionLifetime,
+} from "@/lib/supabase/cookie-options";
 import type { Database } from "@/types/database";
 
 /**
@@ -21,6 +25,7 @@ export async function updateSession(
     env.SUPABASE_URL,
     env.SUPABASE_PUBLISHABLE_KEY,
     {
+      cookieOptions: SESSION_COOKIE_OPTIONS,
       cookies: {
         getAll() {
           return request.cookies.getAll();
@@ -31,7 +36,7 @@ export async function updateSession(
           }
           response = NextResponse.next({ request });
           for (const { name, value, options } of cookiesToSet) {
-            response.cookies.set(name, value, options);
+            response.cookies.set(name, value, withSessionLifetime(options));
           }
           // Header anti-cache dari library: respons yang membawa sesi tidak boleh di-cache.
           for (const [key, value] of Object.entries(headers)) {
