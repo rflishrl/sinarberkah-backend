@@ -6,7 +6,7 @@ export const maxDuration = 10;
 
 /** Publik: satu pola. */
 export const GET = withApi<"public", { id: string }>(
-  { access: "public", publicCache: true, rateLimit: RATE_LIMITS.publicRead },
+  { access: "public", rateLimit: RATE_LIMITS.publicRead },
   async ({ params, supabase }) => ({
     data: await getGalleryItem(
       supabase,

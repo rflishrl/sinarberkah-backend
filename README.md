@@ -149,7 +149,7 @@ Lists return `data: { items: [...], pagination: { total, page, limit, totalPages
 
 List parameters: `?page=1&limit=50&q=keyword`. The maximum `limit` is 100. Invalid values fall back to the defaults.
 
-Public GET responses are cached by the CDN for 30 seconds. Admin responses are never cached.
+No API response is cached by the CDN (`Cache-Control: private, no-store`). The frontend keeps its own cache and clears it by tag after every save or delete. A CDN cache in the backend would hand the frontend the old list right after a delete, and the deleted item would come back for up to an hour.
 
 ### Data shapes
 

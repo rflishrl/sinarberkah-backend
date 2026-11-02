@@ -6,6 +6,6 @@ export const maxDuration = 10;
 
 // Frontend sudah memanggil alamat ini. Fitur artikel belum dibuat, jadi daftarnya kosong.
 export const GET = withApi(
-  { access: "public", publicCache: true, rateLimit: RATE_LIMITS.publicRead },
+  { access: "public", rateLimit: RATE_LIMITS.publicRead },
   async () => ({ data: await listArticles() }),
 );

@@ -8,7 +8,7 @@ export const maxDuration = 10;
 
 /** Publik: daftar produk aktif (?q=&page=&limit=). */
 export const GET = withApi(
-  { access: "public", publicCache: true, rateLimit: RATE_LIMITS.publicRead },
+  { access: "public", rateLimit: RATE_LIMITS.publicRead },
   async ({ request, supabase }) => ({
     data: await listProductsFor(
       supabase,

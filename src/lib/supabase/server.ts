@@ -43,7 +43,7 @@ export async function createSessionClient(): Promise<AppSupabaseClient> {
 
 /**
  * Client tanpa sesi untuk pembaca publik (peran `anon`). Tidak membaca atau menulis
- * cookie, jadi respons publik aman di-cache CDN tanpa membawa sesi siapa pun.
+ * cookie, jadi respons publik tidak pernah membawa sesi siapa pun.
  */
 export function createPublicClient(): AppSupabaseClient {
   const env = getServerEnv();

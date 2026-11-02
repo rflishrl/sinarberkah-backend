@@ -1,5 +1,7 @@
 import { after } from "next/server";
 
+import { log } from "@/lib/log";
+
 /**
  * Memberi tahu frontend bahwa data berubah, supaya cache-nya dibuang dan perubahan
  * tampil langsung. Dijalankan setelah respons dikirim, jadi admin tidak menunggu.
@@ -11,7 +13,19 @@ import { after } from "next/server";
 export function revalidateFrontend(tags: string[]) {
   const baseUrl = process.env.FRONTEND_URL?.replace(/\/$/, "");
   const secret = process.env.REVALIDATE_SECRET;
-  if (!baseUrl || !secret) return;
+  if (!baseUrl || !secret) {
+    // Tidak diam-diam: tanpa ini, data yang dihapus baru hilang dari situs setelah 1 jam.
+    log(
+      "warn",
+      "revalidate dilewati: FRONTEND_URL atau REVALIDATE_SECRET kosong",
+      {
+        tags,
+        hasFrontendUrl: Boolean(baseUrl),
+        hasSecret: Boolean(secret),
+      },
+    );
+    return;
+  }
 
   after(async () => {
     try {

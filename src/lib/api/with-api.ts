@@ -30,8 +30,6 @@ interface WithApiOptions<A extends Access> {
   access: A;
   /** Batas percobaan per IP. Wajib untuk endpoint publik yang menulis (mis. login). */
   rateLimit?: RateLimitRule;
-  /** Cache CDN singkat untuk GET publik. Respons admin selalu `no-store`. */
-  publicCache?: boolean;
   /** Cek header Origin untuk metode ubah-data. Bawaan: aktif. */
   sameOrigin?: boolean;
 }
@@ -55,7 +53,13 @@ interface RouteContext<P> {
   params: Promise<P>;
 }
 
-const PUBLIC_CACHE = "public, s-maxage=30, stale-while-revalidate=300";
+/*
+ * Semua respons API, termasuk GET publik, tidak boleh disimpan cache bersama (CDN).
+ * Frontend (plato) sudah punya cache sendiri selama 1 jam yang dibuang lewat tag saat admin
+ * menyimpan atau menghapus data. Kalau CDN backend ikut menyimpan daftar lama, plato bisa
+ * mengambil daftar lama itu tepat saat menyegarkan halaman, dan data yang sudah dihapus
+ * tampil lagi sampai 1 jam.
+ */
 const NO_STORE = "private, no-store";
 
 function json<T>(body: ApiResponse<T>, status: number): Response {
@@ -176,14 +180,7 @@ export function withApi<
         result.status ?? 200,
       );
       if (options.access === "public") applyCors(request, response);
-      response.headers.set(
-        "Cache-Control",
-        options.access === "public" &&
-          options.publicCache &&
-          isSafeMethod(request.method)
-          ? PUBLIC_CACHE
-          : NO_STORE,
-      );
+      response.headers.set("Cache-Control", NO_STORE);
     } catch (error) {
       response = toFailure(error, requestId, request);
       response.headers.set("Cache-Control", NO_STORE);

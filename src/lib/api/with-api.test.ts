@@ -36,12 +36,9 @@ beforeEach(() => {
 
 describe("withApi: bentuk respons", () => {
   it("sukses dibungkus { success: true, data } dengan request id", async () => {
-    const GET = withApi(
-      { access: "public", publicCache: true },
-      async ({ supabase }) => ({
-        data: { client: (supabase as unknown as typeof publicClient).kind },
-      }),
-    );
+    const GET = withApi({ access: "public" }, async ({ supabase }) => ({
+      data: { client: (supabase as unknown as typeof publicClient).kind },
+    }));
     const response = await GET(sameOriginRequest("/api/x"));
 
     expect(response.status).toBe(200);
@@ -49,8 +46,16 @@ describe("withApi: bentuk respons", () => {
       success: true,
       data: { client: "public" },
     });
-    expect(response.headers.get("cache-control")).toContain("s-maxage");
     expect(response.headers.get("x-request-id")).toBeTruthy();
+  });
+
+  it("GET publik tidak boleh disimpan cache CDN (regresi: data terhapus tampil lagi)", async () => {
+    const GET = withApi({ access: "public" }, async () => ({ data: [] }));
+    const response = await GET(sameOriginRequest("/api/x"));
+    const cacheControl = response.headers.get("cache-control") ?? "";
+
+    expect(cacheControl).toBe("private, no-store");
+    expect(cacheControl).not.toMatch(/s-maxage|stale-while-revalidate|public/);
   });
 
   it("status kustom dipakai (mis. 201)", async () => {
@@ -161,12 +166,9 @@ describe("withApi: keamanan", () => {
 
   it("admin: handler menerima actor dan respons tidak di-cache", async () => {
     getUser.mockResolvedValue({ data: { user: ADMIN }, error: null });
-    const GET = withApi(
-      { access: "admin", publicCache: true },
-      async ({ actor }) => ({
-        data: actor,
-      }),
-    );
+    const GET = withApi({ access: "admin" }, async ({ actor }) => ({
+      data: actor,
+    }));
     const response = await GET(sameOriginRequest("/api/x"));
     expect(await readBody(response)).toEqual({
       success: true,
