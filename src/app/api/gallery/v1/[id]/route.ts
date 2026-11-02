@@ -1,6 +1,18 @@
-import { patternsResource } from "@/lib/resources";
+import { getGalleryItem } from "@/features/gallery/service";
+import { RATE_LIMITS } from "@/lib/api/rate-limits";
+import { withApi } from "@/lib/api/with-api";
 
-// Update bersifat parsial (hanya kolom yang dikirim), jadi hanya PATCH yang disediakan.
-export const GET = patternsResource.get;
-export const PATCH = patternsResource.update;
-export const DELETE = patternsResource.remove;
+export const maxDuration = 10;
+
+/** Publik: satu pola. */
+export const GET = withApi<"public", { id: string }>(
+  { access: "public", publicCache: true, rateLimit: RATE_LIMITS.publicRead },
+  async ({ params, supabase }) => ({
+    data: await getGalleryItem(
+      supabase,
+      { audience: "public" },
+      "pattern",
+      params.id,
+    ),
+  }),
+);

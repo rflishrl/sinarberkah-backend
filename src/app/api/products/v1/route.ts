@@ -1,4 +1,19 @@
-import { productsResource } from "@/lib/resources";
+import { listProductsFor } from "@/features/products/service";
+import { RATE_LIMITS } from "@/lib/api/rate-limits";
+import { parseQuery } from "@/lib/api/request";
+import { withApi } from "@/lib/api/with-api";
+import { listQuerySchema } from "@/lib/schemas/common";
 
-export const GET = productsResource.list;
-export const POST = productsResource.create;
+export const maxDuration = 10;
+
+/** Publik: daftar produk aktif (?q=&page=&limit=). */
+export const GET = withApi(
+  { access: "public", publicCache: true, rateLimit: RATE_LIMITS.publicRead },
+  async ({ request, supabase }) => ({
+    data: await listProductsFor(
+      supabase,
+      { audience: "public" },
+      parseQuery(request, listQuerySchema(50)),
+    ),
+  }),
+);

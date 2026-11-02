@@ -1,5 +1,20 @@
-import { portfolioResource } from "@/lib/resources";
+import { listGallery } from "@/features/gallery/service";
+import { RATE_LIMITS } from "@/lib/api/rate-limits";
+import { parseQuery } from "@/lib/api/request";
+import { withApi } from "@/lib/api/with-api";
+import { listQuerySchema } from "@/lib/schemas/common";
 
-// Portofolio. Alamat ini sama dengan yang dipakai frontend sekarang: GET /api/gallery/v1/portfolio
-export const GET = portfolioResource.list;
-export const POST = portfolioResource.create;
+export const maxDuration = 10;
+
+/** Publik: daftar portofolio (?q=&page=&limit=). */
+export const GET = withApi(
+  { access: "public", publicCache: true, rateLimit: RATE_LIMITS.publicRead },
+  async ({ request, supabase }) => ({
+    data: await listGallery(
+      supabase,
+      { audience: "public" },
+      "portfolio",
+      parseQuery(request, listQuerySchema(50)),
+    ),
+  }),
+);

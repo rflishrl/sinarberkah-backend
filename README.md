@@ -1,10 +1,30 @@
 # Sinar Berkah backend
 
-Backend and admin panel for the Sinar Berkah website. You use it to manage products, portfolio projects, and the pattern gallery. Text data lives in PostgreSQL and photos live in Vercel Blob.
+Backend and admin panel for the Sinar Berkah website. You use it to manage products, portfolio projects, and the pattern gallery. Text data lives in Supabase (PostgreSQL) and photos live in Vercel Blob.
 
-- Stack: Next.js 16 (App Router), TypeScript, Tailwind CSS 4, PostgreSQL with Drizzle ORM, Zod, Vercel Blob
+- Stack: Next.js 16 (App Router), TypeScript, Tailwind CSS 4, shadcn/ui, Supabase, TanStack Query 5, Zod, React Hook Form, Vercel Blob
 - Admin panel: `/admin` (sign in at `/login`)
 - API: `/api/...` (anyone can read, only the admin can write)
+
+## How the code is organized
+
+A request goes down through these layers. Each layer only calls the one below it.
+
+```
+Browser (client component, hooks)
+  -> fetch("/api/...")                     relative path only, never Supabase
+Route handler   src/app/api/**/route.ts    thin, wrapped in withApi()
+  -> service.ts                            business rules and authorization
+  -> repository.ts                         the only place that queries Supabase
+  -> Supabase                              RLS decides what each caller can see
+```
+
+- `withApi()` (`src/lib/api/with-api.ts`) handles the session, the same-origin check, rate limiting, errors, and the response shape.
+- Services check that the caller is an admin. RLS in the database checks it again.
+- The server client uses the publishable key and the user's cookie, so RLS applies. The secret key is only used in `src/lib/supabase/admin.ts`, for rate limiting, the photo cleanup cron, and the `create-admin` script.
+- Pages load their first data on the server (the service is called directly) and pass it to TanStack Query through `HydrationBoundary`. The client then reuses the same cache after every save or delete.
+- Forms use shadcn `Field` with React Hook Form. The Zod schema in `features/<name>/schemas.ts` is shared by the form and the route.
+- `npm run check:boundaries` fails if a client file imports Supabase or server code, if anything uses `NEXT_PUBLIC_`, or if a route skips `withApi()`.
 
 ## Getting started
 
@@ -14,34 +34,19 @@ Backend and admin panel for the Sinar Berkah website. You use it to manage produ
 npm install
 ```
 
-### 2. Set up PostgreSQL
+### 2. Create the Supabase project
 
-Local development uses Docker Compose. Start Docker Desktop, then run:
-
-```bash
-npm run db:up        # starts PostgreSQL and waits until it is ready
-```
-
-The database listens on `localhost:5432` and accepts connections from your computer only. The defaults live in `docker-compose.yml`:
-
-| Setting  | Default           |
-| -------- | ----------------- |
-| User     | `sinarberkah`     |
-| Password | `sinarberkah_dev` |
-| Database | `sinarberkah`     |
-| Port     | `5432`            |
-
-To change them, create a `.env` file in this folder (for example `POSTGRES_PASSWORD=secret` or `POSTGRES_PORT=5433`) and update `DATABASE_URL` in `.env.local` to match.
-The data sits in the Docker volume `sinarberkah_pgdata`, so it survives `npm run db:down`.
-
-For production, use a managed PostgreSQL service such as [Neon](https://neon.tech) through the Vercel Marketplace (Storage, then Create, then Postgres), Supabase, or Railway. Use the pooled connection string (on Neon, the host contains `-pooler`) and put it in `DATABASE_URL`.
+1. Create a project at [supabase.com](https://supabase.com). Pick the Singapore region, the same as Vercel (`sin1`).
+2. Turn off public sign-ups: Authentication, Sign In / Providers, switch off "Allow new users to sign up". Without this, anyone can create an account.
+3. Copy the project URL and the publishable key from the Connect button. Copy the secret key from Settings, API Keys.
+4. For local commands, copy the session pooler address from Connect, Direct.
 
 ### 3. Set up Vercel Blob (photo storage)
 
 1. In the [Vercel dashboard](https://vercel.com/dashboard), open Storage, then Create, then Blob.
 2. Copy `BLOB_READ_WRITE_TOKEN` from the `.env.local` tab.
 
-Without the token, photo upload does not work. The API only accepts photo URLs hosted on Vercel Blob, so use a Blob store for local development too (a separate development store keeps test photos out of production).
+Without the token, photo upload does not work. The API only accepts photo URLs hosted on Vercel Blob, so use a Blob store for local development too. A separate development store keeps test photos out of production.
 
 ### 4. Fill in `.env.local`
 
@@ -50,87 +55,101 @@ copy .env.example .env.local      # Windows
 # cp .env.example .env.local      # macOS / Linux
 ```
 
-| Variable                | Value                                                                                                |
-| ----------------------- | ---------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`          | PostgreSQL connection string (the default matches Docker Compose)                                    |
-| `BLOB_READ_WRITE_TOKEN` | Vercel Blob token                                                                                    |
-| `AUTH_SECRET`           | Random text, at least 32 characters                                                                  |
-| `SESSION_VERSION`       | Session version (default `1`). Change it to sign out every admin session at once                     |
-| `ADMIN_EMAIL`           | The admin email. It must include a domain, for example `admin@sinarberkah.com`                       |
-| `ADMIN_PASSWORD_HASH`   | Hash of the admin password (see below)                                                               |
-| `ALLOWED_ORIGINS`       | Frontend addresses allowed to read the API from a browser, separated by commas                       |
-| `FRONTEND_URL`          | Frontend address. The backend calls its `/api/revalidate` after every save or delete                 |
-| `REVALIDATE_SECRET`     | Shared secret for that call. Use the same value in the frontend. Leave empty to turn the feature off |
-| `CRON_SECRET`           | Secret for the daily photo cleanup cron. Vercel sends it automatically. Leave empty to turn it off   |
+| Variable                   | Value                                                                                                |
+| -------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `SUPABASE_URL`             | Project URL                                                                                          |
+| `SUPABASE_PUBLISHABLE_KEY` | Publishable key (`sb_publishable_...`)                                                               |
+| `SUPABASE_SECRET_KEY`      | Secret key (`sb_secret_...`). It bypasses RLS. Keep it on the server                                 |
+| `SUPABASE_DB_URL`          | Session pooler address, only for `npm run db:push` and `db:types`. Not needed on Vercel              |
+| `BLOB_READ_WRITE_TOKEN`    | Vercel Blob token                                                                                    |
+| `ALLOWED_ORIGINS`          | Frontend addresses allowed to read the API from a browser, separated by commas                       |
+| `FRONTEND_URL`             | Frontend address. The backend calls its `/api/revalidate` after every save or delete                 |
+| `REVALIDATE_SECRET`        | Shared secret for that call. Use the same value in the frontend. Leave empty to turn the feature off |
+| `CRON_SECRET`              | Secret for the daily photo cleanup cron. Vercel sends it automatically. Leave empty to turn it off   |
 
-Generate `AUTH_SECRET`:
+Generate a secret:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-Generate `ADMIN_PASSWORD_HASH` (the password needs at least 6 characters):
-
-```bash
-npm run hash-password -- "your-password"
-```
-
-Copy the printed `ADMIN_PASSWORD_HASH=...` line into `.env.local`. Write values without quotes.
+Set these variables by hand. The Vercel and Supabase integration uses other names and the older anon and service role keys, and this project does not read those.
 
 ### 5. Create the tables
 
 ```bash
-npm run db:migrate
+npm run db:push
+npm run db:types
 ```
 
-### 6. Run it
+`db:push` applies the files in `supabase/migrations`. `db:types` rewrites `src/types/database.ts` from the live schema. Run it again after every migration.
+
+### 6. Create the admin account
 
 ```bash
-npm run dev
+npm run create-admin -- admin@sinarberkah.com
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and sign in with `ADMIN_EMAIL` and your password.
+The script asks for the password. It is not shown on screen and not saved in your shell history. Run it again with the same email to reset the password.
 
-The frontend (`sinarberkah-plato`) also uses port 3000. Run one of them on another port, for example `npm run dev -- -p 4000`.
+An admin is a user with `app_metadata.role = "admin"`. Only the secret key can set it, so a user cannot make themselves an admin.
+
+### 7. Run it
+
+```bash
+npm run dev -- -p 4000
+```
+
+Open [http://localhost:4000/login](http://localhost:4000/login). The frontend (`sinarberkah-plato`) uses port 3000, so run the backend on another port.
 
 ## Commands
 
-| Command                             | What it does                                                |
-| ----------------------------------- | ----------------------------------------------------------- |
-| `npm run dev`                       | Starts the development server                               |
-| `npm run build` / `npm run start`   | Builds and runs the production server                       |
-| `npm run lint`                      | Checks the code                                             |
-| `npm run typecheck`                 | Checks TypeScript types                                     |
-| `npm test`                          | Runs the tests (Vitest, needs Node 22.12+)                  |
-| `npm run hash-password -- "..."`    | Creates the admin password hash                             |
-| `npm run db:up` / `npm run db:down` | Starts or stops the local PostgreSQL (Docker)               |
-| `npm run db:migrate`                | Applies migrations to the database                          |
-| `npm run db:generate`               | Creates a new migration after you change `src/db/schema.ts` |
-| `npm run db:studio`                 | Opens Drizzle Studio to browse the tables                   |
+| Command                           | What it does                                                     |
+| --------------------------------- | ---------------------------------------------------------------- |
+| `npm run dev`                     | Starts the development server                                    |
+| `npm run build` / `npm run start` | Builds and runs the production server                            |
+| `npm run lint`                    | Checks the code                                                  |
+| `npm run typecheck`               | Checks TypeScript types                                          |
+| `npm test`                        | Runs the tests (Vitest, needs Node 22.12+)                       |
+| `npm run check:boundaries`        | Checks the layer rules described above                           |
+| `npm run db:push`                 | Applies new files from `supabase/migrations` to the database     |
+| `npm run db:types`                | Regenerates `src/types/database.ts`                              |
+| `npm run create-admin -- <email>` | Creates or updates the admin account                             |
+| `npm run db:copy-from-neon`       | One-time copy of products and gallery from the old Neon database |
+
+To change the schema, add a new SQL file in `supabase/migrations` (never edit one that was already applied), then run `db:push` and `db:types`.
 
 ## API
 
-Every response has the shape `{ "data": ... }`. Lists also include `meta` (`total`, `page`, `limit`, `totalPages`). Errors look like `{ "error": { "message": "...", "details": { "fieldErrors": {...} } } }`.
+Every response has one of these shapes:
 
-| Method              | Path                                  | Purpose                                                         | Access |
-| ------------------- | ------------------------------------- | --------------------------------------------------------------- | ------ |
-| GET                 | `/api/products/v1`                    | List active products                                            | Public |
-| GET                 | `/api/products/v1/{id}`               | Get one product                                                 | Public |
-| POST                | `/api/products/v1`                    | Add a product                                                   | Admin  |
-| PATCH               | `/api/products/v1/{id}`               | Update a product (only the fields you send)                     | Admin  |
-| DELETE              | `/api/products/v1/{id}`               | Delete a product and its photo                                  | Admin  |
-| GET                 | `/api/gallery/v1/portfolio`           | List portfolio projects                                         | Public |
-| POST, PATCH, DELETE | `/api/gallery/v1/portfolio[/{id}]`    | Manage portfolio projects                                       | Admin  |
-| GET                 | `/api/gallery/v1`                     | List patterns                                                   | Public |
-| POST, PATCH, DELETE | `/api/gallery/v1[/{id}]`              | Manage patterns                                                 | Admin  |
-| POST                | `/api/upload`                         | Upload a photo (`multipart/form-data` with `file` and `folder`) | Admin  |
-| POST                | `/api/auth/login`, `/api/auth/logout` | Sign in and out (same-origin requests only)                     | None   |
-| GET                 | `/api/health`                         | Check that the server and the database are up (503 if not)      | Public |
-| GET                 | `/api/cron/cleanup-blobs`             | Delete unused photos older than 24 hours (Vercel Cron, daily)   | Cron   |
+```json
+{ "success": true, "data": {} }
+{ "success": false, "error": "Message you can show to a user" }
+```
 
-List parameters: `?page=1&limit=50&q=keyword`. The maximum `limit` is 100.
+Lists return `data: { items: [...], pagination: { total, page, limit, totalPages } }`. Status codes are 400, 401, 403, 404, 409, 422, 429, and 500. Raw database errors are never sent to the caller. They are logged with a request id, and the same id is returned in the `x-request-id` header.
 
-The frontend already calls `/api/gallery/v1` and `/api/gallery/v1/portfolio`, so it works with this backend without changes.
+| Method             | Path                                  | Purpose                                                         | Access |
+| ------------------ | ------------------------------------- | --------------------------------------------------------------- | ------ |
+| GET                | `/api/products/v1[/{id}]`             | List active products, or get one                                | Public |
+| GET                | `/api/gallery/v1/portfolio[/{id}]`    | List portfolio projects, or get one                             | Public |
+| GET                | `/api/gallery/v1[/{id}]`              | List patterns, or get one                                       | Public |
+| GET                | `/api/article/v1`                     | Articles (empty for now)                                        | Public |
+| GET, POST          | `/api/admin/products`                 | List all products (also hidden ones), add a product             | Admin  |
+| GET, PATCH, DELETE | `/api/admin/products/{id}`            | Get, update (only the fields you send), or delete a product     | Admin  |
+| GET, POST          | `/api/admin/portfolio`                | List and add portfolio projects                                 | Admin  |
+| GET, PATCH, DELETE | `/api/admin/portfolio/{id}`           | Manage one portfolio project                                    | Admin  |
+| GET, POST          | `/api/admin/patterns`                 | List and add patterns                                           | Admin  |
+| GET, PATCH, DELETE | `/api/admin/patterns/{id}`            | Manage one pattern                                              | Admin  |
+| POST               | `/api/upload`                         | Upload a photo (`multipart/form-data` with `file` and `folder`) | Admin  |
+| POST               | `/api/auth/login`, `/api/auth/logout` | Sign in and out (same-origin requests only)                     | None   |
+| GET                | `/api/health`                         | Check that the server and the database are up (503 if not)      | Public |
+| GET                | `/api/cron/cleanup-blobs`             | Delete unused photos older than 24 hours (Vercel Cron, daily)   | Cron   |
+
+List parameters: `?page=1&limit=50&q=keyword`. The maximum `limit` is 100. Invalid values fall back to the defaults.
+
+Public GET responses are cached by the CDN for 30 seconds. Admin responses are never cached.
 
 ### Data shapes
 
@@ -177,52 +196,48 @@ When you send data with POST or PATCH, pass the photo as `image_url`. It must be
 ### Connecting the frontend
 
 In the frontend project, set `API_BASE_URL` to this backend's address without a trailing slash, for example `API_BASE_URL=https://sinarberkah-backend.vercel.app`.
+
 The frontend reads data on the server and caches it for one hour. When `FRONTEND_URL` and `REVALIDATE_SECRET` are set, the backend tells the frontend to clear its cache after every save or delete, so changes show up right away. Without them, changes show up within about an hour.
 
 ## Security
 
-- Only a signed-in admin can change data. The session is an `httpOnly` cookie with `sameSite=lax` that lasts 12 hours. Changing `SESSION_VERSION` revokes every session.
-- Requests that change data, plus login and logout, must come from the same host (`Origin` is checked), which blocks CSRF.
-- The admin password is stored as a `scrypt` hash, never as plain text. The hash carries its own cost settings (`scrypt.<N>.<r>.<p>.<salt>.<hash>`), so the cost can be raised later without breaking existing hashes. Older `scrypt.<salt>.<hash>` values still work.
-- Login allows 8 attempts per 10 minutes per IP. The counter lives in PostgreSQL (`rate_limits` table), so it applies across all Vercel instances. A Vercel Firewall rate-limit rule on `/api/auth/login` adds a second layer.
-- Uploads are checked for type, size (4 MB maximum), and file content (JPG, PNG, WebP). Photo URLs must point to Vercel Blob.
-- Photos that were uploaded but never saved (an abandoned form) are deleted by a daily cron after 24 hours.
-- Every response carries security headers (CSP, HSTS, `X-Frame-Options`, `nosniff`), set in `next.config.ts`.
-- There is one admin account, defined by environment variables. Never commit `.env.local`.
+- **Database access.** RLS is on for every table. Anyone can read active products and the gallery. Only an admin can write. The rate limit table lives in the `private` schema, which the API does not expose.
+- **Sessions.** Supabase Auth keeps the session in `httpOnly` cookies. `src/proxy.ts` refreshes them. Routes and the admin layout verify the user with `getUser()`, which asks the Auth server, not with the cookie alone.
+- **Same origin.** Requests that change data, plus login and logout, must come from the same host (`Origin` is checked). This blocks CSRF.
+- **Rate limits.** Login allows 8 attempts per 10 minutes per IP. Public reads allow 120 per minute per IP. The counters live in Postgres, so they apply across all Vercel instances.
+- **Uploads.** Type, size (4 MB maximum), and file content are checked (JPG, PNG, WebP). Photo URLs must point to Vercel Blob.
+- **Orphan photos.** Photos that were uploaded but never saved are deleted by a daily cron after 24 hours.
+- **Headers.** Every response carries security headers (CSP, HSTS, `X-Frame-Options`, `nosniff`), set in `next.config.ts`.
+- **Secrets.** Nothing uses a `NEXT_PUBLIC_` variable. Never commit `.env.local`.
 
 ## Deploying to Vercel
 
 The backend and the frontend are two separate Vercel projects. Deploy the backend first, because the frontend needs its address.
-Both projects run in Singapore (`sin1`) through `vercel.json`, the closest region to Indonesia.
+Both projects run in Singapore (`sin1`) through `vercel.json`.
 
-### 1. Push to GitHub
+### 1. Prepare the database
 
-Create two repositories (backend and frontend) and push each one. Check that `.env.local` stays out of the commit. `.gitignore` already excludes it.
+Vercel does not run migrations. Run them from your computer before you deploy:
+
+```bash
+npm run db:push
+```
 
 ### 2. Backend
 
 1. Import the backend repository at [vercel.com/new](https://vercel.com/new). Vercel detects Next.js on its own.
-2. Add these variables before the first deploy, or right after it:
+2. Add these variables:
 
-   | Variable              | Value                                                                                                       |
-   | --------------------- | ----------------------------------------------------------------------------------------------------------- |
-   | `AUTH_SECRET`         | Random text, at least 32 characters                                                                         |
-   | `ADMIN_EMAIL`         | Admin email with a domain, for example `admin@sinarberkah.com`                                              |
-   | `ADMIN_PASSWORD_HASH` | Output of `npm run hash-password -- "your-password"`                                                        |
-   | `ALLOWED_ORIGINS`     | Production frontend address, for example `https://sinarberkah.vercel.app` (add it once the frontend exists) |
-   | `CRON_SECRET`         | Random text, at least 16 characters. Vercel uses it to call the daily photo cleanup                         |
+   | Variable                   | Value                                                                                                       |
+   | -------------------------- | ----------------------------------------------------------------------------------------------------------- |
+   | `SUPABASE_URL`             | Project URL                                                                                                 |
+   | `SUPABASE_PUBLISHABLE_KEY` | Publishable key                                                                                             |
+   | `SUPABASE_SECRET_KEY`      | Secret key. Mark it as Sensitive                                                                            |
+   | `ALLOWED_ORIGINS`          | Production frontend address, for example `https://sinarberkah.vercel.app` (add it once the frontend exists) |
+   | `CRON_SECRET`              | Random text, at least 16 characters. Vercel uses it to call the daily photo cleanup                         |
 
-3. Open the Storage tab of the project and create two stores:
-   - Postgres (Neon through the Marketplace). Choose the Singapore region and leave Auth off. Connecting it fills in `DATABASE_URL` and `POSTGRES_URL`. Leave the custom prefix empty.
-   - Blob, with Public access. Tick the option that adds a read-write token. This fills in `BLOB_READ_WRITE_TOKEN`.
-4. Redeploy.
-
-The first deploy fails at the migration step because the database does not exist yet. That is expected. Once the stores are connected, redeploy and the build succeeds.
-
-On a Production build, `scripts/vercel-build.mjs` runs `drizzle-kit migrate` and creates the tables.
-A Preview build skips migrations, so a test deploy never changes the production database.
-
-If you change `src/db/schema.ts`, run `npm run db:generate`, commit the `drizzle/` folder, and push. The migration runs on the next Production deploy.
+3. Open the Storage tab, create a Blob store with Public access, and tick the option that adds a read-write token. This fills in `BLOB_READ_WRITE_TOKEN`.
+4. Deploy.
 
 ### 3. Frontend
 
@@ -239,39 +254,38 @@ If you change `src/db/schema.ts`, run `npm run db:generate`, commit the `drizzle
 ### 4. After both projects are live
 
 1. Set `ALLOWED_ORIGINS` in the backend to the frontend address, then redeploy the backend.
-2. Open `https://<backend-address>/login`, sign in, and add products, portfolio projects, and patterns.
-3. Set `FRONTEND_URL` (the frontend address) and `REVALIDATE_SECRET` in the backend, and the same `REVALIDATE_SECRET` in the frontend. Then a change in the admin panel shows up right away. Without them, the frontend caches data for one hour.
+2. Open `https://<backend-address>/login` and sign in with the account from `create-admin`.
+3. Set `FRONTEND_URL` (the frontend address) and `REVALIDATE_SECRET` in the backend, and the same `REVALIDATE_SECRET` in the frontend. Then a change in the admin panel shows up right away.
 
 ### Troubleshooting
 
-- The login page shows "Terjadi kesalahan" (something went wrong): an environment variable is missing or invalid. Open the Logs tab in Vercel and look for a line starting with `ConfigError`. It names the variable.
-- Vercel refuses to connect Neon because `DATABASE_URL` already exists: delete the old `DATABASE_URL` under Settings, Environment Variables, then connect again.
-- Vercel refuses to create the Blob store because `BLOB_READ_WRITE_TOKEN` already exists: check the Storage tab. If a Blob store is already connected, you are done. If not, delete the variable and create the store again.
-- Do not set a custom prefix to get around either error. It renames the variables, and the backend reads the default names.
-
-### Using the terminal (optional)
-
-```bash
-npm i -g vercel
-vercel login
-vercel link          # link this folder to a Vercel project
-vercel env pull .env.local   # copy the variables from Vercel to your computer
-vercel --prod        # deploy to production
-```
-
-`vercel env pull` overwrites `.env.local`. After that, `DATABASE_URL` points to the Vercel database, so be careful when developing.
+- The page shows "Terjadi kesalahan" (something went wrong): an environment variable is missing or invalid. Open the Logs tab in Vercel and look for a line with `Incomplete environment`. It names the variable.
+- Login always fails with "Email atau password salah": run `npm run create-admin -- <email>` again. Check that the user exists under Authentication, Users in Supabase.
+- Login says "Akun ini tidak punya akses admin": the user exists but has no admin role. Run `create-admin` with that email to add it.
+- Every admin request returns 401 on Vercel: `SUPABASE_URL` and the keys must belong to the same project.
+- `db:push` cannot connect: use the session pooler address (IPv4). The direct address needs IPv6.
 
 ## Project layout
 
 ```
+supabase/migrations/   SQL schema, RLS policies, and database functions
 src/
+  proxy.ts             Refreshes the Supabase session (Next.js 16 proxy)
   app/
-    admin/        Admin panel (dashboard, products, portfolio, pattern gallery)
-    login/        Sign-in page
-    api/          API endpoints
+    admin/             Admin pages (thin; they use features/*/components)
+    login/             Sign-in page
+    api/               Route handlers (thin, wrapped in withApi)
+  features/<name>/     schemas.ts, repository.ts, service.ts, queries.ts, hooks.ts, components/
+                       (auth, gallery, products, uploads, dashboard, health, articles)
   components/
-    admin/        Forms, lists, admin shell
-    ui/           Buttons, inputs, messages
-  db/             Table schema (Drizzle)
-  lib/            crud.ts (shared CRUD handlers), repositories.ts (database access), auth.ts, db.ts, blob.ts, validation.ts
+    ui/                shadcn/ui components (generated, do not edit)
+    admin-kit/         Shared admin parts built on top of ui/
+    providers/         TanStack Query provider
+  lib/
+    api/               withApi, errors, response types, client, rate limit
+    auth/              Actor, admin check, session helper
+    supabase/          Server, admin, and proxy clients, error mapping
+    schemas/           Zod parts shared by features
+    storage/           Vercel Blob helpers
+  types/database.ts    Generated by `npm run db:types`
 ```

@@ -1,9 +1,4 @@
-type ClassValue = string | false | null | undefined;
-
-/** Menggabungkan class name, mengabaikan nilai kosong. */
-export function cn(...values: ClassValue[]): string {
-  return values.filter(Boolean).join(" ");
-}
+export { cn } from "cn";
 
 const rupiah = new Intl.NumberFormat("id-ID", {
   style: "currency",

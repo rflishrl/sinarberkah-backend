@@ -1,17 +1,24 @@
+import { AlertTriangleIcon, PlusIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { IconType } from "react-icons";
-import {
-  MdAdd,
-  MdGridView,
-  MdInventory2,
-  MdPhotoLibrary,
-} from "react-icons/md";
+import { MdGridView, MdInventory2, MdPhotoLibrary } from "react-icons/md";
 
-import { PageHeading } from "@/components/admin/list-parts";
-import { buttonStyles } from "@/components/ui/button";
-import { Alert } from "@/components/ui/feedback";
-import { getCounts } from "@/lib/queries";
+import { PageHeading } from "@/components/admin-kit/page-heading";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { getDashboardCounts } from "@/features/dashboard/service";
+import { getCurrentAdmin } from "@/lib/auth/session";
+import { createSessionClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -35,26 +42,26 @@ const ENDPOINTS = [
     access: "Publik",
   },
   {
-    method: "POST",
-    path: "/api/products/v1",
-    note: "Tambah produk",
+    method: "GET / POST",
+    path: "/api/admin/products",
+    note: "Daftar dan tambah produk",
     access: "Admin",
   },
   {
-    method: "POST",
-    path: "/api/gallery/v1/portfolio",
-    note: "Tambah portofolio",
+    method: "GET / POST",
+    path: "/api/admin/portfolio",
+    note: "Daftar dan tambah portofolio",
     access: "Admin",
   },
   {
-    method: "POST",
-    path: "/api/gallery/v1",
-    note: "Tambah pola",
+    method: "GET / POST",
+    path: "/api/admin/patterns",
+    note: "Daftar dan tambah pola",
     access: "Admin",
   },
   {
-    method: "PUT / DELETE",
-    path: ".../{id}",
+    method: "PATCH / DELETE",
+    path: "/api/admin/.../{id}",
     note: "Ubah atau hapus data",
     access: "Admin",
   },
@@ -75,7 +82,7 @@ function StatCard({
   return (
     <Link
       href={href}
-      className="group flex items-center gap-4 rounded-lg bg-white p-5 shadow-card transition-shadow duration-200 hover:shadow-md motion-reduce:transition-none"
+      className="group flex items-center gap-4 rounded-lg bg-card p-5 shadow-card transition-shadow duration-200 hover:shadow-md motion-reduce:transition-none"
     >
       <span className="inline-flex size-12 items-center justify-center rounded-md bg-brand/15 text-brand-strong">
         <Icon size={26} aria-hidden="true" />
@@ -84,7 +91,7 @@ function StatCard({
         <span className="block font-heading text-3xl leading-none font-extrabold">
           {value}
         </span>
-        <span className="mt-1 block text-sm font-semibold text-muted group-hover:text-ink">
+        <span className="mt-1 block text-sm font-semibold text-muted-foreground group-hover:text-foreground">
           {label}
         </span>
       </span>
@@ -92,8 +99,16 @@ function StatCard({
   );
 }
 
+/**
+ * Dashboard dirender penuh di server: datanya hanya angka ringkasan tanpa interaksi,
+ * jadi tidak perlu TanStack Query atau hidrasi.
+ */
 export default async function DashboardPage() {
-  const counts = await getCounts();
+  const [supabase, actor] = await Promise.all([
+    createSessionClient(),
+    getCurrentAdmin(),
+  ]);
+  const counts = await getDashboardCounts(supabase, actor);
   const blobReady = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 
   return (
@@ -104,9 +119,12 @@ export default async function DashboardPage() {
       />
 
       {!blobReady && (
-        <Alert tone="error" className="mb-6">
-          Unggah foto belum aktif karena <code>BLOB_READ_WRITE_TOKEN</code>{" "}
-          belum diisi. Anda masih bisa menambah data dengan menempel URL foto.
+        <Alert variant="destructive" className="mb-6">
+          <AlertTriangleIcon aria-hidden="true" />
+          <AlertDescription>
+            Unggah foto belum aktif karena <code>BLOB_READ_WRITE_TOKEN</code>{" "}
+            belum diisi. Anda masih bisa menambah data dengan menempel URL foto.
+          </AlertDescription>
         </Alert>
       )}
 
@@ -141,73 +159,62 @@ export default async function DashboardPage() {
           Tambah cepat
         </h2>
         <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-          <Link href="/admin/products/new" className={buttonStyles("primary")}>
-            <MdAdd size={20} aria-hidden="true" />
-            Produk
-          </Link>
-          <Link
-            href="/admin/portfolio/new"
-            className={buttonStyles("secondary")}
-          >
-            <MdAdd size={20} aria-hidden="true" />
-            Portofolio
-          </Link>
-          <Link
-            href="/admin/patterns/new"
-            className={buttonStyles("secondary")}
-          >
-            <MdAdd size={20} aria-hidden="true" />
-            Pola
-          </Link>
+          <Button asChild size="lg" className="h-11 px-4">
+            <Link href="/admin/products/new">
+              <PlusIcon aria-hidden="true" />
+              Produk
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="lg" className="h-11 px-4">
+            <Link href="/admin/portfolio/new">
+              <PlusIcon aria-hidden="true" />
+              Portofolio
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="lg" className="h-11 px-4">
+            <Link href="/admin/patterns/new">
+              <PlusIcon aria-hidden="true" />
+              Pola
+            </Link>
+          </Button>
         </div>
       </section>
 
       <section aria-labelledby="api-title" className="mt-10">
         <h2 id="api-title" className="font-heading text-lg font-bold">
-          Alamat API untuk frontend
+          Alamat API
         </h2>
-        <p className="mt-1 text-muted">
-          Frontend membaca data dari alamat berikut. Perubahan di panel ini
-          tampil di website setelah cache habis (±1 jam).
+        <p className="mt-1 text-muted-foreground">
+          Frontend membaca data dari alamat publik. Perubahan di panel ini
+          langsung tampil jika FRONTEND_URL dan REVALIDATE_SECRET diisi; jika
+          tidak, setelah cache habis (sekitar 1 jam).
         </p>
-        <div className="mt-3 overflow-x-auto rounded-lg bg-white shadow-card">
-          <table className="w-full text-left text-sm">
-            <caption className="sr-only">Daftar alamat API</caption>
-            <thead className="border-b border-line bg-surface text-muted">
-              <tr>
-                <th scope="col" className="px-4 py-3 font-semibold">
-                  Metode
-                </th>
-                <th scope="col" className="px-4 py-3 font-semibold">
-                  Alamat
-                </th>
-                <th scope="col" className="px-4 py-3 font-semibold">
-                  Fungsi
-                </th>
-                <th scope="col" className="px-4 py-3 font-semibold">
-                  Akses
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
+        <div className="mt-3 overflow-hidden rounded-lg bg-card shadow-card">
+          <Table>
+            <TableCaption className="sr-only">Daftar alamat API</TableCaption>
+            <TableHeader className="bg-muted/60">
+              <TableRow>
+                <TableHead className="px-4">Metode</TableHead>
+                <TableHead className="px-4">Alamat</TableHead>
+                <TableHead className="px-4">Fungsi</TableHead>
+                <TableHead className="px-4">Akses</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {ENDPOINTS.map((endpoint) => (
-                <tr
-                  key={`${endpoint.method}-${endpoint.path}-${endpoint.note}`}
-                >
-                  <td className="px-4 py-3 font-mono text-xs font-semibold whitespace-nowrap">
+                <TableRow key={`${endpoint.method}-${endpoint.path}`}>
+                  <TableCell className="px-4 font-mono text-xs font-semibold">
                     {endpoint.method}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 font-mono text-xs">
                     {endpoint.path}
-                  </td>
-                  <td className="px-4 py-3">{endpoint.note}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    {endpoint.access}
-                  </td>
-                </tr>
+                  </TableCell>
+                  <TableCell className="px-4">{endpoint.note}</TableCell>
+                  <TableCell className="px-4">{endpoint.access}</TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </section>
     </>

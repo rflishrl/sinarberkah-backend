@@ -1,9 +1,9 @@
-import { clearSessionCookie } from "@/lib/auth";
-import { assertSameOrigin, ok, route } from "@/lib/http";
+import { logout } from "@/features/auth/service";
+import { withApi } from "@/lib/api/with-api";
 
-export const POST = route(async (request: Request) => {
-  // Mencegah situs lain mengeluarkan admin tanpa sepengetahuannya.
-  assertSameOrigin(request);
-  await clearSessionCookie();
-  return ok({ loggedOut: true });
-});
+export const maxDuration = 10;
+
+// Cek Origin (bawaan withApi) mencegah situs lain mengeluarkan admin diam-diam.
+export const POST = withApi({ access: "session" }, async ({ supabase }) => ({
+  data: await logout(supabase),
+}));

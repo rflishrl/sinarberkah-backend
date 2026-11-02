@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { GalleryCreatePage } from "@/components/admin/gallery-pages";
+import { GalleryCreatePage } from "@/features/gallery/components/gallery-pages";
 
 export const metadata: Metadata = { title: "Tambah Galeri Pola" };
 

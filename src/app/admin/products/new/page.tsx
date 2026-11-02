@@ -1,15 +1,9 @@
 import type { Metadata } from "next";
 
-import { ProductForm } from "@/components/admin/product-form";
-import { PageHeading } from "@/components/admin/list-parts";
+import { ProductCreatePage } from "@/features/products/components/product-pages";
 
 export const metadata: Metadata = { title: "Tambah Produk" };
 
-export default function NewProductPage() {
-  return (
-    <>
-      <PageHeading title="Tambah produk" />
-      <ProductForm />
-    </>
-  );
+export default function Page() {
+  return <ProductCreatePage />;
 }

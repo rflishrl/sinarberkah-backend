@@ -1,21 +1,37 @@
 "use client";
 
+import { AlertCircleIcon } from "lucide-react";
+import { useEffect } from "react";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Alert } from "@/components/ui/feedback";
 
 export default function AdminError({
+  error,
   reset,
 }: {
-  error: Error;
+  error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => {
+    // Kode digest sama dengan yang tercatat di log server.
+    console.error("[admin]", error.digest ?? error.message);
+  }, [error]);
+
   return (
     <div className="space-y-4">
-      <Alert tone="error">
-        Data tidak dapat dimuat. Pastikan <code>DATABASE_URL</code> di file{" "}
-        <code>.env.local</code> sudah benar dan database dapat dijangkau.
+      <Alert variant="destructive">
+        <AlertCircleIcon aria-hidden="true" />
+        <AlertTitle>Data tidak dapat dimuat</AlertTitle>
+        <AlertDescription>
+          Pastikan variabel Supabase di <code>.env.local</code> sudah benar dan
+          proyek Supabase dapat dijangkau.
+          {error.digest && <span className="block">Kode: {error.digest}</span>}
+        </AlertDescription>
       </Alert>
-      <Button onClick={reset}>Coba lagi</Button>
+      <Button size="lg" className="h-11 px-4" onClick={reset}>
+        Coba lagi
+      </Button>
     </div>
   );
 }

@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-import { LoginForm } from "@/app/login/login-form";
-import { getSession } from "@/lib/auth";
+import { LoginForm } from "@/features/auth/components/login-form";
+import { getCurrentAdmin } from "@/lib/auth/session";
 
 export const metadata: Metadata = { title: "Masuk" };
 export const dynamic = "force-dynamic";
 
+// Tidak ada data awal yang perlu di-prefetch: halaman ini hanya form login.
 export default async function LoginPage() {
-  if (await getSession()) redirect("/admin");
+  if (await getCurrentAdmin()) redirect("/admin");
 
   return (
     <main
@@ -27,7 +28,9 @@ export default async function LoginPage() {
             <h1 className="font-heading text-xl leading-tight font-extrabold uppercase">
               Sinar Berkah
             </h1>
-            <p className="text-sm text-muted">Masuk ke panel admin</p>
+            <p className="text-sm text-muted-foreground">
+              Masuk ke panel admin
+            </p>
           </div>
         </div>
         <LoginForm />

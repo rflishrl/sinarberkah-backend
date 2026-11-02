@@ -4,19 +4,23 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   resolve: {
-    alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
+    alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+      // `server-only` sengaja melempar error di luar React Server Components.
+      // Di pengujian (Node biasa) diganti modul kosong.
+      "server-only": fileURLToPath(
+        new URL("./test/empty-module.ts", import.meta.url),
+      ),
+    },
   },
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],
-    // Nilai env palsu khusus pengujian, supaya getEnv() tidak membaca .env.local.
+    // Fake env values for tests only, so getServerEnv() never reads .env.local.
     env: {
-      DATABASE_URL: "postgres://test:test@localhost:5432/test",
-      AUTH_SECRET: "test-secret-yang-panjangnya-lebih-dari-32-karakter",
-      ADMIN_EMAIL: "admin@sinarberkah.com",
-      // Hash asli dibuat di auth.test.ts lewat hashPassword(); ini hanya pengisi.
-      ADMIN_PASSWORD_HASH: "scrypt.placeholder",
-      SESSION_VERSION: "1",
+      SUPABASE_URL: "https://test-project.supabase.co",
+      SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test",
+      SUPABASE_SECRET_KEY: "sb_secret_test",
       CRON_SECRET: "cron-secret-untuk-pengujian",
     },
   },

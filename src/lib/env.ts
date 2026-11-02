@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-/** Dilempar saat file `.env` belum lengkap. Pesannya hanya untuk log server. */
+/** Thrown when the environment is incomplete. The message is for server logs only. */
 export class ConfigError extends Error {
   constructor(message: string) {
     super(message);
@@ -8,52 +8,56 @@ export class ConfigError extends Error {
   }
 }
 
-const envSchema = z.object({
-  DATABASE_URL: z
+/*
+ * Every value is read on the server only, so none of them use the public Next.js
+ * prefix. The browser never talks to Supabase.
+ */
+const serverEnvSchema = z.object({
+  SUPABASE_URL: z.url({
+    protocol: /^https?$/,
+    error: "must be the Supabase project URL (https://xxxx.supabase.co)",
+  }),
+  SUPABASE_PUBLISHABLE_KEY: z
     .string()
-    .regex(
-      /^postgres(ql)?:\/\//,
-      "harus berupa URL PostgreSQL (postgres://...)",
+    .trim()
+    .startsWith(
+      "sb_publishable_",
+      "must be a publishable key (sb_publishable_...)",
     ),
-  AUTH_SECRET: z.string().min(32, "minimal 32 karakter"),
-  // Email admin: wajib berformat email lengkap dengan domain (mis. admin@sinarberkah.com).
-  ADMIN_EMAIL: z.email("harus berupa alamat email dengan domain"),
-  ADMIN_PASSWORD_HASH: z
+  // Bypasses RLS. Only used in src/lib/supabase/admin.ts.
+  SUPABASE_SECRET_KEY: z
     .string()
-    .startsWith("scrypt.", "belum dibuat (jalankan: npm run hash-password)"),
-  // Ganti nilainya (mis. "1" -> "2") untuk mengeluarkan semua sesi admin yang sedang aktif.
-  SESSION_VERSION: z.string().trim().min(1).max(64).default("1"),
+    .trim()
+    .startsWith("sb_secret_", "must be a secret key (sb_secret_...)"),
   BLOB_READ_WRITE_TOKEN: z.string().optional(),
   ALLOWED_ORIGINS: z.string().optional(),
-  // Diisi Vercel Cron di header Authorization. Kosong = endpoint cron mati.
+  FRONTEND_URL: z.string().optional(),
+  REVALIDATE_SECRET: z.string().optional(),
+  // Sent by Vercel Cron in the Authorization header. Empty = the cron endpoint is off.
   CRON_SECRET: z.string().optional(),
 });
 
-export type Env = z.infer<typeof envSchema>;
+export type ServerEnv = z.infer<typeof serverEnvSchema>;
 
-let cached: Env | undefined;
+let cachedServerEnv: ServerEnv | undefined;
 
-/** Membaca dan memvalidasi variabel lingkungan saat pertama dipakai (bukan saat build). */
-export function getEnv(): Env {
-  if (cached) return cached;
+/** Reads and validates the environment on first use (not at build time). */
+export function getServerEnv(): ServerEnv {
+  if (cachedServerEnv) return cachedServerEnv;
 
-  // Integrasi Vercel Postgres / Neon mengisi `POSTGRES_URL`, jadi dipakai sebagai cadangan.
-  const result = envSchema.safeParse({
-    ...process.env,
-    DATABASE_URL: process.env.DATABASE_URL ?? process.env.POSTGRES_URL,
-  });
+  const result = serverEnvSchema.safeParse(process.env);
   if (!result.success) {
     const problems = result.error.issues
       .map((issue) => `${issue.path.join(".")} ${issue.message}`)
       .join("; ");
-    throw new ConfigError(`Konfigurasi .env belum lengkap: ${problems}`);
+    throw new ConfigError(`Incomplete environment: ${problems}`);
   }
 
-  cached = result.data;
-  return cached;
+  cachedServerEnv = result.data;
+  return cachedServerEnv;
 }
 
-/** Daftar origin frontend yang boleh membaca API dari browser (CORS). */
+/** Frontend origins allowed to read the API from the browser (CORS). */
 export function getAllowedOrigins(): string[] {
   return (process.env.ALLOWED_ORIGINS ?? "")
     .split(",")

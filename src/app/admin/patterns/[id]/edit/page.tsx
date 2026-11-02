@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { GalleryEditPage } from "@/components/admin/gallery-pages";
+import { GalleryEditPage } from "@/features/gallery/components/gallery-pages";
 
 export const metadata: Metadata = { title: "Ubah Galeri Pola" };
 

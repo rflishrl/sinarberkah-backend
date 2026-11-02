@@ -1,6 +1,13 @@
-import { productsResource } from "@/lib/resources";
+import { getProduct } from "@/features/products/service";
+import { RATE_LIMITS } from "@/lib/api/rate-limits";
+import { withApi } from "@/lib/api/with-api";
 
-// Update bersifat parsial (hanya kolom yang dikirim), jadi hanya PATCH yang disediakan.
-export const GET = productsResource.get;
-export const PATCH = productsResource.update;
-export const DELETE = productsResource.remove;
+export const maxDuration = 10;
+
+/** Publik: satu produk aktif. Produk yang disembunyikan dijawab 404. */
+export const GET = withApi<"public", { id: string }>(
+  { access: "public", publicCache: true, rateLimit: RATE_LIMITS.publicRead },
+  async ({ params, supabase }) => ({
+    data: await getProduct(supabase, { audience: "public" }, params.id),
+  }),
+);
