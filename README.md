@@ -110,7 +110,7 @@ Open [http://localhost:4000/login](http://localhost:4000/login). The frontend (`
 | `npm run build` / `npm run start` | Builds and runs the production server                            |
 | `npm run lint`                    | Checks the code                                                  |
 | `npm run typecheck`               | Checks TypeScript types                                          |
-| `npm test`                        | Runs the tests (Vitest, needs Node 22.12+)                       |
+| `npm test`                        | Runs the tests (Vitest, needs Node 24)                           |
 | `npm run check:boundaries`        | Checks the layer rules described above                           |
 | `npm run db:push`                 | Applies new files from `supabase/migrations` to the database     |
 | `npm run db:types`                | Regenerates `src/types/database.ts`                              |
