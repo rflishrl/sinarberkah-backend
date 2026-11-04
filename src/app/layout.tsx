@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Mulish, Open_Sans } from "next/font/google";
 
 import { QueryProvider } from "@/components/providers/query-provider";
+import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 
@@ -38,7 +39,11 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="id" className={cn(mulish.variable, openSans.variable)}>
+    <html
+      lang="id"
+      suppressHydrationWarning
+      className={cn(mulish.variable, openSans.variable)}
+    >
       <body>
         <a
           href="#main-content"
@@ -46,9 +51,15 @@ export default function RootLayout({
         >
           Lewati ke konten utama
         </a>
-        <QueryProvider>{children}</QueryProvider>
-        {/* Panel admin selalu terang, jadi toast tidak mengikuti tema sistem. */}
-        <Toaster theme="light" richColors closeButton position="top-right" />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <QueryProvider>{children}</QueryProvider>
+          <Toaster richColors closeButton position="top-right" />
+        </ThemeProvider>
       </body>
     </html>
   );

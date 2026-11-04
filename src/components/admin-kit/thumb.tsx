@@ -7,7 +7,10 @@ export function Thumb({ src, className }: { src: string; className?: string }) {
     <img
       src={src}
       alt=""
+      width={56}
+      height={56}
       loading="lazy"
+      decoding="async"
       className={cn("size-14 shrink-0 rounded-md object-cover", className)}
     />
   ) : (
