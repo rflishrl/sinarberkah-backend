@@ -1,12 +1,26 @@
-import { AlertTriangleIcon, PlusIcon } from "lucide-react";
+import {
+  AlertTriangleIcon,
+  ArrowUpRightIcon,
+  Grid3X3Icon,
+  ImagesIcon,
+  PackageIcon,
+  PlusIcon,
+  type LucideIcon,
+} from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import type { IconType } from "react-icons";
-import { MdGridView, MdInventory2, MdPhotoLibrary } from "react-icons/md";
 
 import { PageHeading } from "@/components/admin-kit/page-heading";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -17,8 +31,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getDashboardCounts } from "@/features/dashboard/service";
-import { RevalidateCard } from "@/features/revalidate/components/revalidate-card";
-import { getRevalidateStatus } from "@/features/revalidate/service";
 import { getCurrentAdmin } from "@/lib/auth/session";
 import { createSessionClient } from "@/lib/supabase/server";
 
@@ -70,168 +82,264 @@ const ENDPOINTS = [
   { method: "POST", path: "/api/upload", note: "Unggah foto", access: "Admin" },
 ];
 
+function MethodBadge({ method }: { method: string }) {
+  if (method === "GET") {
+    return (
+      <Badge variant="outline" className="font-mono text-xs">
+        GET
+      </Badge>
+    );
+  }
+  if (method === "POST" || method.includes("POST")) {
+    return (
+      <Badge className="bg-brand/15 font-mono text-xs text-brand-strong hover:bg-brand/25 dark:bg-brand/20 dark:text-brand">
+        {method}
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="secondary" className="font-mono text-xs">
+      {method}
+    </Badge>
+  );
+}
+
 function StatCard({
   label,
   value,
   href,
+  category,
   icon: Icon,
 }: {
   label: string;
   value: number;
   href: string;
-  icon: IconType;
+  category: string;
+  icon: LucideIcon;
 }) {
   return (
     <Link
       href={href}
-      className="group flex items-center gap-4 rounded-lg bg-card p-5 shadow-card transition-shadow duration-200 hover:shadow-md motion-reduce:transition-none"
+      className="group block rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
     >
-      <span className="inline-flex size-12 items-center justify-center rounded-md bg-brand/15 text-brand-strong">
-        <Icon size={26} aria-hidden="true" />
-      </span>
-      <span>
-        <span className="block font-heading text-3xl leading-none font-extrabold">
-          {value}
-        </span>
-        <span className="mt-1 block text-sm font-semibold text-muted-foreground group-hover:text-foreground">
-          {label}
-        </span>
-      </span>
+      <Card className="h-full border border-border/80 bg-card/60 backdrop-blur-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md dark:bg-card/40">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <div className="flex size-9 items-center justify-center rounded-lg border border-border/60 bg-muted/50 text-muted-foreground group-hover:border-brand/40 group-hover:bg-brand/10 group-hover:text-brand-strong dark:group-hover:text-brand">
+            <Icon className="size-4.5" aria-hidden="true" />
+          </div>
+          <Badge variant="outline" className="text-xs text-muted-foreground">
+            {category}
+          </Badge>
+        </CardHeader>
+        <CardContent className="pt-2">
+          <div className="flex items-baseline justify-between">
+            <div>
+              <div className="text-3xl font-extrabold tracking-tight text-foreground tabular-nums">
+                {value}
+              </div>
+              <p className="mt-1 text-sm font-medium text-muted-foreground transition-colors group-hover:text-foreground">
+                {label}
+              </p>
+            </div>
+            <ArrowUpRightIcon
+              className="size-4 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-brand-strong dark:group-hover:text-brand"
+              aria-hidden="true"
+            />
+          </div>
+        </CardContent>
+      </Card>
     </Link>
   );
 }
 
-/**
- * Dashboard dirender penuh di server: datanya hanya angka ringkasan tanpa interaksi,
- * jadi tidak perlu TanStack Query atau hidrasi.
- */
 export default async function DashboardPage() {
   const [supabase, actor] = await Promise.all([
     createSessionClient(),
     getCurrentAdmin(),
   ]);
   const counts = await getDashboardCounts(supabase, actor);
-  const revalidateStatus = getRevalidateStatus(actor);
   const blobReady = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 
   return (
-    <>
-      <PageHeading
-        title="Dashboard"
-        description="Ringkasan konten yang tampil di website Sinar Berkah."
-      />
+    <div className="space-y-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <PageHeading
+          title="Dashboard"
+          description="Ringkasan konten dan konfigurasi operasional website Sinar Berkah."
+        />
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm" className="h-9 gap-1.5">
+            <Link href="/admin/products/new">
+              <PlusIcon className="size-4" aria-hidden="true" />
+              <span>Produk Baru</span>
+            </Link>
+          </Button>
+        </div>
+      </div>
 
       {!blobReady && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertTriangleIcon aria-hidden="true" />
+        <Alert variant="destructive">
+          <AlertTriangleIcon className="size-4" aria-hidden="true" />
+          <AlertTitle>Perhatian Penyimpanan Foto</AlertTitle>
           <AlertDescription>
-            Unggah foto belum aktif karena <code>BLOB_READ_WRITE_TOKEN</code>{" "}
-            belum diisi. Anda masih bisa menambah data dengan menempel URL foto.
+            Penyimpanan foto belum aktif karena{" "}
+            <code>BLOB_READ_WRITE_TOKEN</code> belum diisi. Anda masih bisa
+            menambah data dengan menempel URL foto.
           </AlertDescription>
         </Alert>
       )}
 
-      <section aria-labelledby="stats-title">
-        <h2 id="stats-title" className="sr-only">
-          Jumlah data
+      {/* Grid Kartu Metrik Ringkasan */}
+      <section aria-labelledby="stats-heading">
+        <h2 id="stats-heading" className="sr-only">
+          Jumlah Data Konten
         </h2>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <StatCard
-            label="Produk"
+            label="Katalog Produk"
             value={counts.products}
             href="/admin/products"
-            icon={MdInventory2}
+            category="Katalog"
+            icon={PackageIcon}
           />
           <StatCard
-            label="Portofolio"
+            label="Proyek Portofolio"
             value={counts.portfolio}
             href="/admin/portfolio"
-            icon={MdPhotoLibrary}
+            category="Galeri"
+            icon={ImagesIcon}
           />
           <StatCard
-            label="Galeri Pola"
+            label="Galeri Pola Cetak"
             value={counts.patterns}
             href="/admin/patterns"
-            icon={MdGridView}
+            category="Motif & Desain"
+            icon={Grid3X3Icon}
           />
         </div>
       </section>
 
-      <section aria-labelledby="quick-title" className="mt-8">
-        <h2 id="quick-title" className="font-heading text-lg font-bold">
-          Tambah cepat
-        </h2>
-        <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-          <Button asChild size="lg" className="h-11 px-4">
-            <Link href="/admin/products/new">
-              <PlusIcon aria-hidden="true" />
-              Produk
-            </Link>
-          </Button>
-          <Button asChild variant="outline" size="lg" className="h-11 px-4">
-            <Link href="/admin/portfolio/new">
-              <PlusIcon aria-hidden="true" />
-              Portofolio
-            </Link>
-          </Button>
-          <Button asChild variant="outline" size="lg" className="h-11 px-4">
-            <Link href="/admin/patterns/new">
-              <PlusIcon aria-hidden="true" />
-              Pola
-            </Link>
-          </Button>
-        </div>
+      {/* Aksi Cepat */}
+      <section aria-labelledby="quick-actions-heading">
+        <Card>
+          <CardHeader>
+            <CardTitle
+              id="quick-actions-heading"
+              className="text-base font-semibold"
+            >
+              Aksi Cepat
+            </CardTitle>
+            <CardDescription>
+              Pintasan cepat untuk menambahkan item baru ke katalog dan galeri
+              situs.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Button
+                asChild
+                className="h-11 w-full justify-start gap-2.5 px-4 font-medium"
+              >
+                <Link href="/admin/products/new">
+                  <PlusIcon className="size-4" aria-hidden="true" />
+                  <span>Tambah Produk</span>
+                </Link>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="h-11 w-full justify-start gap-2.5 px-4 font-medium"
+              >
+                <Link href="/admin/portfolio/new">
+                  <PlusIcon className="size-4" aria-hidden="true" />
+                  <span>Tambah Portofolio</span>
+                </Link>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="h-11 w-full justify-start gap-2.5 px-4 font-medium"
+              >
+                <Link href="/admin/patterns/new">
+                  <PlusIcon className="size-4" aria-hidden="true" />
+                  <span>Tambah Galeri Pola</span>
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </section>
 
-      <section aria-labelledby="refresh-title" className="mt-10">
-        <h2 id="refresh-title" className="font-heading text-lg font-bold">
-          Penyegaran situs publik
-        </h2>
-        <p className="mt-1 mb-3 text-muted-foreground">
-          Setelah Anda menyimpan atau menghapus data, backend menyuruh situs
-          publik memperbarui halamannya. Jika tombol uji gagal, perubahan baru
-          tampil di situs setelah sekitar 1 jam.
-        </p>
-        <RevalidateCard status={revalidateStatus} />
+      {/* Tabel Alamat API */}
+      <section aria-labelledby="api-heading">
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2
+                  id="api-heading"
+                  className="text-base font-semibold text-foreground"
+                >
+                  Daftar Alamat API
+                </h2>
+                <CardDescription>
+                  Daftar endpoint publik dan internal admin untuk integrasi
+                  data.
+                </CardDescription>
+              </div>
+              <Badge variant="outline" className="w-fit text-xs">
+                {ENDPOINTS.length} Endpoints
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-hidden rounded-lg border border-border">
+              <Table>
+                <TableCaption className="sr-only">
+                  Daftar rute API Sinar Berkah
+                </TableCaption>
+                <TableHeader className="bg-muted/40">
+                  <TableRow>
+                    <TableHead className="w-32 px-4">Metode</TableHead>
+                    <TableHead className="px-4">Rute Alamat</TableHead>
+                    <TableHead className="px-4">Keterangan</TableHead>
+                    <TableHead className="w-24 px-4 text-right">
+                      Akses
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {ENDPOINTS.map((endpoint) => (
+                    <TableRow key={`${endpoint.method}-${endpoint.path}`}>
+                      <TableCell className="px-4 py-3">
+                        <MethodBadge method={endpoint.method} />
+                      </TableCell>
+                      <TableCell className="px-4 py-3 font-mono text-xs font-semibold text-foreground">
+                        {endpoint.path}
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-sm text-muted-foreground">
+                        {endpoint.note}
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-right">
+                        <Badge
+                          variant={
+                            endpoint.access === "Publik"
+                              ? "secondary"
+                              : "outline"
+                          }
+                          className="text-xs"
+                        >
+                          {endpoint.access}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       </section>
-
-      <section aria-labelledby="api-title" className="mt-10">
-        <h2 id="api-title" className="font-heading text-lg font-bold">
-          Alamat API
-        </h2>
-        <p className="mt-1 text-muted-foreground">
-          Frontend membaca data dari alamat publik. Perubahan di panel ini
-          langsung tampil jika FRONTEND_URL dan REVALIDATE_SECRET diisi; jika
-          tidak, setelah cache habis (sekitar 1 jam).
-        </p>
-        <div className="mt-3 overflow-hidden rounded-lg bg-card shadow-card">
-          <Table>
-            <TableCaption className="sr-only">Daftar alamat API</TableCaption>
-            <TableHeader className="bg-muted/60">
-              <TableRow>
-                <TableHead className="px-4">Metode</TableHead>
-                <TableHead className="px-4">Alamat</TableHead>
-                <TableHead className="px-4">Fungsi</TableHead>
-                <TableHead className="px-4">Akses</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {ENDPOINTS.map((endpoint) => (
-                <TableRow key={`${endpoint.method}-${endpoint.path}`}>
-                  <TableCell className="px-4 font-mono text-xs font-semibold">
-                    {endpoint.method}
-                  </TableCell>
-                  <TableCell className="px-4 font-mono text-xs">
-                    {endpoint.path}
-                  </TableCell>
-                  <TableCell className="px-4">{endpoint.note}</TableCell>
-                  <TableCell className="px-4">{endpoint.access}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </section>
-    </>
+    </div>
   );
 }

@@ -26,33 +26,64 @@
  * tampil dengan warna dan font yang sama dengan panel admin lama.
  */
 :root {
-  --background: #f7f7f7;
-  --foreground: #222222;
+  color-scheme: light;
+  --background: #f8fafc;
+  --foreground: #18181b;
   --card: #ffffff;
-  --card-foreground: #222222;
+  --card-foreground: #18181b;
   --popover: #ffffff;
-  --popover-foreground: #222222;
-  --primary: #222222;
+  --popover-foreground: #18181b;
+  --primary: #18181b;
   --primary-foreground: #ffffff;
-  --secondary: #ffffff;
-  --secondary-foreground: #222222;
-  --muted: #efefef;
-  --muted-foreground: #5f5f5f;
-  --accent: #f0f0f0;
-  --accent-foreground: #222222;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --accent: #f4f4f5;
+  --accent-foreground: #18181b;
   --destructive: #b42318;
-  --border: #e3e3e3;
-  --input: #c9c9c9;
+  --border: #e4e4e7;
+  --input: #d4d4d8;
   --ring: #d63a2c;
   --radius: 0.5rem;
-  --sidebar: #222222;
-  --sidebar-foreground: #ffffff;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #18181b;
   --sidebar-primary: #ff7062;
-  --sidebar-primary-foreground: #222222;
-  --sidebar-accent: #2e2e2e;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f4f4f5;
+  --sidebar-accent-foreground: #18181b;
+  --sidebar-border: #e4e4e7;
+  --sidebar-ring: #ff7062;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #09090b;
+  --foreground: #fafafa;
+  --card: #121214;
+  --card-foreground: #fafafa;
+  --popover: #121214;
+  --popover-foreground: #fafafa;
+  --primary: #fafafa;
+  --primary-foreground: #18181b;
+  --secondary: #1f1f23;
+  --secondary-foreground: #fafafa;
+  --muted: #1f1f23;
+  --muted-foreground: #a1a1aa;
+  --accent: #1f1f23;
+  --accent-foreground: #fafafa;
+  --destructive: #ef4444;
+  --border: #27272a;
+  --input: #27272a;
+  --ring: #ff7062;
+  --sidebar: #0e0e11;
+  --sidebar-foreground: #fafafa;
+  --sidebar-primary: #ff7062;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1f1f23;
   --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #3a3a3a;
-  --sidebar-ring: #ffffff;
+  --sidebar-border: #232328;
+  --sidebar-ring: #ff7062;
 }
 
 @theme inline {
@@ -121,6 +152,13 @@
   button:not(:disabled),
   [role="button"]:not(:disabled) {
     cursor: pointer;
+  }
+
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--foreground);
+    transition: background-color 5000s ease-in-out 0s;
   }
 
   @media (prefers-reduced-motion: reduce) {
