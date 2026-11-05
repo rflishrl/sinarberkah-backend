@@ -9,9 +9,8 @@ export const maxDuration = 10;
 /** Publik: daftar portofolio (?q=&page=&limit=). */
 export const GET = withApi(
   { access: "public", rateLimit: RATE_LIMITS.publicRead },
-  async ({ request, supabase }) => ({
+  async ({ request }) => ({
     data: await listGallery(
-      supabase,
       { audience: "public" },
       "portfolio",
       parseQuery(request, listQuerySchema(50)),

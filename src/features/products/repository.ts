@@ -5,20 +5,28 @@ import type {
   ProductDto,
   ProductUpdateInput,
 } from "@/features/products/schemas";
-import { toAppError } from "@/lib/supabase/errors";
-import type { AppSupabaseClient } from "@/lib/supabase/server";
-import type { Tables } from "@/types/database";
+import { getDb } from "@/lib/db/client";
 
-type ProductRow = Tables<"products">;
+interface RawProductRow {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  price: number;
+  image_url: string;
+  is_active: boolean;
+  created_at: string | Date;
+  updated_at: string | Date;
+}
 
 /** Preserves legacy column names for backwards compatibility. */
-function toDto(row: ProductRow): ProductDto {
+function toDto(row: RawProductRow): ProductDto {
   return {
     _id: row.id,
     name: row.name,
     category: row.category,
     description: row.description,
-    price: row.price,
+    price: Number(row.price),
     image: { image_url: row.image_url },
     isActive: row.is_active,
     createdAt: new Date(row.created_at).toISOString(),
@@ -26,105 +34,123 @@ function toDto(row: ProductRow): ProductDto {
   };
 }
 
-/** Maps camelCase input to snake_case columns. Omitted fields are excluded. */
-function toColumns(input: ProductUpdateInput) {
-  return {
-    ...(input.name !== undefined && { name: input.name }),
-    ...(input.category !== undefined && { category: input.category }),
-    ...(input.description !== undefined && { description: input.description }),
-    ...(input.price !== undefined && { price: input.price }),
-    ...(input.image_url !== undefined && { image_url: input.image_url }),
-    ...(input.isActive !== undefined && { is_active: input.isActive }),
-  };
-}
-
 export interface ListParams {
   q?: string;
   limit: number;
   offset: number;
-  /** When true, queries active products only; RLS enforces equivalent public access. */
   activeOnly: boolean;
 }
 
-export async function listProducts(
-  supabase: AppSupabaseClient,
-  { q, limit, offset, activeOnly }: ListParams,
-): Promise<{ items: ProductDto[]; total: number }> {
-  const [rows, count] = await Promise.all([
-    supabase.rpc("list_products", {
-      p_q: q,
-      p_limit: limit,
-      p_offset: offset,
-      p_active_only: activeOnly,
-    }),
-    supabase.rpc("count_products", { p_q: q, p_active_only: activeOnly }),
-  ]);
-  if (rows.error) throw toAppError(rows.error, "memuat produk");
-  if (count.error) throw toAppError(count.error, "menghitung produk");
-  return { items: rows.data.map(toDto), total: count.data };
+export async function listProducts({
+  q,
+  limit,
+  offset,
+  activeOnly,
+}: ListParams): Promise<{ items: ProductDto[]; total: number }> {
+  const sql = getDb();
+  const searchPattern = q ? `%${q.trim()}%` : null;
+
+  const countRows = await sql`
+    SELECT COUNT(*)::int AS count
+    FROM products
+    WHERE
+      (${!activeOnly} OR is_active = true)
+      AND (${!searchPattern} OR name ILIKE ${searchPattern} OR category ILIKE ${searchPattern})
+  `;
+  const total = Number(countRows[0]?.count || 0);
+
+  const rows = await sql`
+    SELECT id, name, category, description, price, image_url, is_active, created_at, updated_at
+    FROM products
+    WHERE
+      (${!activeOnly} OR is_active = true)
+      AND (${!searchPattern} OR name ILIKE ${searchPattern} OR category ILIKE ${searchPattern})
+    ORDER BY created_at DESC
+    LIMIT ${limit} OFFSET ${offset}
+  `;
+
+  return {
+    items: (rows as unknown as RawProductRow[]).map(toDto),
+    total,
+  };
 }
 
-export async function countProducts(
-  supabase: AppSupabaseClient,
-): Promise<number> {
-  const { data, error } = await supabase.rpc("count_products", {
-    p_active_only: false,
-  });
-  if (error) throw toAppError(error, "menghitung produk");
-  return data;
+export async function countProducts(): Promise<number> {
+  const sql = getDb();
+  const rows = await sql`SELECT COUNT(*)::int AS count FROM products`;
+  return Number(rows[0]?.count || 0);
 }
 
 export async function findProduct(
-  supabase: AppSupabaseClient,
   id: string,
   { activeOnly }: { activeOnly: boolean },
 ): Promise<ProductDto | null> {
-  let query = supabase.from("products").select("*").eq("id", id);
-  if (activeOnly) query = query.eq("is_active", true);
-  const { data, error } = await query.maybeSingle();
-  if (error) throw toAppError(error, "memuat produk");
-  return data ? toDto(data) : null;
+  const sql = getDb();
+  const rows = await sql`
+    SELECT id, name, category, description, price, image_url, is_active, created_at, updated_at
+    FROM products
+    WHERE id = ${id}::uuid AND (${!activeOnly} OR is_active = true)
+    LIMIT 1
+  `;
+  if (rows.length === 0) return null;
+  return toDto(rows[0] as unknown as RawProductRow);
 }
 
 export async function insertProduct(
-  supabase: AppSupabaseClient,
   input: ProductCreateInput,
 ): Promise<ProductDto> {
-  const { data, error } = await supabase
-    .from("products")
-    .insert({ ...toColumns(input), name: input.name, price: input.price })
-    .select("*")
-    .single();
-  if (error) throw toAppError(error, "menyimpan produk");
-  return toDto(data);
+  const sql = getDb();
+  const rows = await sql`
+    INSERT INTO products (
+      name, category, description, price, image_url, is_active
+    ) VALUES (
+      ${input.name},
+      ${input.category ?? ""},
+      ${input.description ?? ""},
+      ${input.price},
+      ${input.image_url ?? ""},
+      ${input.isActive ?? true}
+    )
+    RETURNING id, name, category, description, price, image_url, is_active, created_at, updated_at
+  `;
+  return toDto(rows[0] as unknown as RawProductRow);
 }
 
-/** Updates row with row-level database lock (RPC update_product); returns null if not found. */
 export async function updateProduct(
-  supabase: AppSupabaseClient,
   id: string,
   input: ProductUpdateInput,
 ): Promise<{ item: ProductDto; previousImageUrl: string } | null> {
-  const { data, error } = await supabase
-    .rpc("update_product", { p_id: id, p_patch: toColumns(input) })
-    .maybeSingle();
-  if (error) throw toAppError(error, "menyimpan perubahan");
-  if (!data) return null;
+  const sql = getDb();
 
-  const { previous_image_url: previousImageUrl, ...row } = data;
-  return { item: toDto(row), previousImageUrl };
+  const existing = await sql`SELECT image_url FROM products WHERE id = ${id}::uuid LIMIT 1`;
+  if (existing.length === 0) return null;
+  const previousImageUrl = (existing[0] as { image_url: string }).image_url;
+
+  const rows = await sql`
+    UPDATE products
+    SET
+      name = COALESCE(${input.name ?? null}, name),
+      category = COALESCE(${input.category ?? null}, category),
+      description = COALESCE(${input.description ?? null}, description),
+      price = COALESCE(${input.price ?? null}, price),
+      image_url = COALESCE(${input.image_url ?? null}, image_url),
+      is_active = COALESCE(${input.isActive ?? null}, is_active),
+      updated_at = NOW()
+    WHERE id = ${id}::uuid
+    RETURNING id, name, category, description, price, image_url, is_active, created_at, updated_at
+  `;
+
+  if (rows.length === 0) return null;
+  return { item: toDto(rows[0] as unknown as RawProductRow), previousImageUrl };
 }
 
-export async function deleteProduct(
-  supabase: AppSupabaseClient,
-  id: string,
-): Promise<ProductDto | null> {
-  const { data, error } = await supabase
-    .from("products")
-    .delete()
-    .eq("id", id)
-    .select("*")
-    .maybeSingle();
-  if (error) throw toAppError(error, "menghapus produk");
-  return data ? toDto(data) : null;
+export async function deleteProduct(id: string): Promise<ProductDto | null> {
+  const sql = getDb();
+  const rows = await sql`
+    DELETE FROM products
+    WHERE id = ${id}::uuid
+    RETURNING id, name, category, description, price, image_url, is_active, created_at, updated_at
+  `;
+  if (rows.length === 0) return null;
+  return toDto(rows[0] as unknown as RawProductRow);
 }

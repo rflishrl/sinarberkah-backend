@@ -8,9 +8,8 @@ export const maxDuration = 10;
 /** Admin: all products, including hidden items (10 per page). */
 export const GET = withApi(
   { access: "admin" },
-  async ({ request, supabase, actor }) => ({
+  async ({ request, actor }) => ({
     data: await listProductsFor(
-      supabase,
       { audience: "admin", actor },
       parseQuery(request, listQuerySchema(10)),
     ),
@@ -19,8 +18,8 @@ export const GET = withApi(
 
 export const POST = withApi(
   { access: "admin" },
-  async ({ request, supabase, actor }) => ({
-    data: await createProduct(supabase, actor, await readJson(request)),
+  async ({ request, actor }) => ({
+    data: await createProduct(actor, await readJson(request)),
     status: 201,
   }),
 );

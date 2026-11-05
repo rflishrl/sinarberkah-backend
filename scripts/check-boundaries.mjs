@@ -1,6 +1,6 @@
 /**
  * Memeriksa batas lapisan:
- * 1. File 'use client' tidak boleh mengimpor Supabase, service, repository, atau
+ * 1. File 'use client' tidak boleh mengimpor Neon, service, repository, atau
  *    modul server lain, dan tidak boleh fetch ke URL luar domain.
  * 2. Tidak boleh ada env berawalan NEXT_PUBLIC_ di kode atau .env.example.
  * 3. Setiap route.ts di src/app/api harus memakai withApi().
@@ -23,8 +23,8 @@ function walk(dir, files = []) {
 }
 
 const FORBIDDEN_IN_CLIENT = [
-  /from\s+["']@supabase\//,
-  /from\s+["']@\/lib\/supabase\//,
+  /from\s+["']@neondatabase\//,
+  /from\s+["']@\/lib\/db\//,
   /from\s+["']@\/features\/[^"']+\/(service|repository)["']/,
   /from\s+["']@\/lib\/(env|log|auth\/session|api\/with-api|api\/rate-limit)["']/,
   /from\s+["']server-only["']/,
@@ -63,8 +63,9 @@ if (
 }
 
 if (problems.length > 0) {
-  console.error(`Batas lapisan dilanggar (${problems.length}):`);
-  for (const problem of problems) console.error(`- ${problem}`);
+  console.error("Pelanggaran batas arsitektur:");
+  for (const p of problems) console.error(" -", p);
   process.exit(1);
 }
-console.log("Batas lapisan aman.");
+
+console.log("Layer boundaries intact.");

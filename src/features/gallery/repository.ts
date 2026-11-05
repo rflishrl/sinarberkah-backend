@@ -6,19 +6,26 @@ import type {
   GalleryItemDto,
   GalleryUpdateInput,
 } from "@/features/gallery/schemas";
-import { toAppError } from "@/lib/supabase/errors";
-import type { AppSupabaseClient } from "@/lib/supabase/server";
-import type { Tables } from "@/types/database";
+import { getDb } from "@/lib/db/client";
 
-type GalleryRow = Tables<"gallery_items">;
+interface RawGalleryRow {
+  id: string;
+  kind: string;
+  title: string;
+  type: string;
+  description: string;
+  image_url: string;
+  created_at: string | Date;
+  updated_at: string | Date;
+}
 
 /**
  * Preserves `_id` and `image.image_url` shapes for backwards compatibility.
  */
-function toDto(row: GalleryRow): GalleryItemDto {
+function toDto(row: RawGalleryRow): GalleryItemDto {
   return {
     _id: row.id,
-    kind: row.kind,
+    kind: row.kind as GalleryKind,
     title: row.title,
     type: row.type,
     description: row.description,
@@ -34,107 +41,114 @@ export interface ListParams {
   offset: number;
 }
 
-/**
- * Paginated list and total count. Queries via RPC with parameterized LIKE escaping
- * to prevent SQL injection in PostgREST filters.
- */
 export async function listGalleryItems(
-  supabase: AppSupabaseClient,
   kind: GalleryKind,
   { q, limit, offset }: ListParams,
 ): Promise<{ items: GalleryItemDto[]; total: number }> {
-  const [rows, count] = await Promise.all([
-    supabase.rpc("list_gallery_items", {
-      p_kind: kind,
-      p_q: q,
-      p_limit: limit,
-      p_offset: offset,
-    }),
-    supabase.rpc("count_gallery_items", { p_kind: kind, p_q: q }),
-  ]);
-  if (rows.error) throw toAppError(rows.error, "memuat galeri");
-  if (count.error) throw toAppError(count.error, "menghitung galeri");
-  return { items: rows.data.map(toDto), total: count.data };
+  const sql = getDb();
+  const searchPattern = q ? `%${q.trim()}%` : null;
+
+  const countRows = await sql`
+    SELECT COUNT(*)::int AS count
+    FROM gallery_items
+    WHERE kind = ${kind}
+      AND (${!searchPattern} OR title ILIKE ${searchPattern} OR type ILIKE ${searchPattern})
+  `;
+  const total = Number(countRows[0]?.count || 0);
+
+  const rows = await sql`
+    SELECT id, kind, title, type, description, image_url, created_at, updated_at
+    FROM gallery_items
+    WHERE kind = ${kind}
+      AND (${!searchPattern} OR title ILIKE ${searchPattern} OR type ILIKE ${searchPattern})
+    ORDER BY created_at DESC
+    LIMIT ${limit} OFFSET ${offset}
+  `;
+
+  return {
+    items: (rows as unknown as RawGalleryRow[]).map(toDto),
+    total,
+  };
 }
 
-export async function countGalleryItems(
-  supabase: AppSupabaseClient,
-  kind: GalleryKind,
-): Promise<number> {
-  const { data, error } = await supabase.rpc("count_gallery_items", {
-    p_kind: kind,
-  });
-  if (error) throw toAppError(error, "menghitung galeri");
-  return data;
+export async function countGalleryItems(kind: GalleryKind): Promise<number> {
+  const sql = getDb();
+  const rows = await sql`SELECT COUNT(*)::int AS count FROM gallery_items WHERE kind = ${kind}`;
+  return Number(rows[0]?.count || 0);
 }
 
 export async function findGalleryItem(
-  supabase: AppSupabaseClient,
   kind: GalleryKind,
   id: string,
 ): Promise<GalleryItemDto | null> {
-  const { data, error } = await supabase
-    .from("gallery_items")
-    .select("*")
-    .eq("id", id)
-    .eq("kind", kind)
-    .maybeSingle();
-  if (error) throw toAppError(error, "memuat data");
-  return data ? toDto(data) : null;
+  const sql = getDb();
+  const rows = await sql`
+    SELECT id, kind, title, type, description, image_url, created_at, updated_at
+    FROM gallery_items
+    WHERE id = ${id}::uuid AND kind = ${kind}
+    LIMIT 1
+  `;
+  if (rows.length === 0) return null;
+  return toDto(rows[0] as unknown as RawGalleryRow);
 }
 
 export async function insertGalleryItem(
-  supabase: AppSupabaseClient,
   kind: GalleryKind,
   input: GalleryCreateInput,
 ): Promise<GalleryItemDto> {
-  const { data, error } = await supabase
-    .from("gallery_items")
-    .insert({
-      kind,
-      title: input.title,
-      type: input.type,
-      description: input.description,
-      image_url: input.image_url,
-    })
-    .select("*")
-    .single();
-  if (error) throw toAppError(error, "menyimpan data");
-  return toDto(data);
+  const sql = getDb();
+  const rows = await sql`
+    INSERT INTO gallery_items (
+      kind, title, type, description, image_url
+    ) VALUES (
+      ${kind},
+      ${input.title},
+      ${input.type},
+      ${input.description ?? ""},
+      ${input.image_url}
+    )
+    RETURNING id, kind, title, type, description, image_url, created_at, updated_at
+  `;
+  return toDto(rows[0] as unknown as RawGalleryRow);
 }
 
-/**
- * Updates record with row-level lock; returns updated record and previous image URL or null.
- */
 export async function updateGalleryItem(
-  supabase: AppSupabaseClient,
   kind: GalleryKind,
   id: string,
   input: GalleryUpdateInput,
 ): Promise<{ item: GalleryItemDto; previousImageUrl: string } | null> {
-  const { data, error } = await supabase
-    .rpc("update_gallery_item", { p_id: id, p_kind: kind, p_patch: input })
-    .maybeSingle();
-  if (error) throw toAppError(error, "menyimpan perubahan");
-  if (!data) return null;
+  const sql = getDb();
 
-  const { previous_image_url: previousImageUrl, ...row } = data;
-  return { item: toDto(row), previousImageUrl };
+  const existing = await sql`SELECT image_url FROM gallery_items WHERE id = ${id}::uuid AND kind = ${kind} LIMIT 1`;
+  if (existing.length === 0) return null;
+  const previousImageUrl = (existing[0] as { image_url: string }).image_url;
+
+  const rows = await sql`
+    UPDATE gallery_items
+    SET
+      title = COALESCE(${input.title ?? null}, title),
+      type = COALESCE(${input.type ?? null}, type),
+      description = COALESCE(${input.description ?? null}, description),
+      image_url = COALESCE(${input.image_url ?? null}, image_url),
+      updated_at = NOW()
+    WHERE id = ${id}::uuid AND kind = ${kind}
+    RETURNING id, kind, title, type, description, image_url, created_at, updated_at
+  `;
+
+  if (rows.length === 0) return null;
+  return { item: toDto(rows[0] as unknown as RawGalleryRow), previousImageUrl };
 }
 
-/** Deletes record; returns deleted item or null if not found. */
 export async function deleteGalleryItem(
-  supabase: AppSupabaseClient,
   kind: GalleryKind,
   id: string,
 ): Promise<GalleryItemDto | null> {
-  const { data, error } = await supabase
-    .from("gallery_items")
-    .delete()
-    .eq("id", id)
-    .eq("kind", kind)
-    .select("*")
-    .maybeSingle();
-  if (error) throw toAppError(error, "menghapus data");
-  return data ? toDto(data) : null;
+  const sql = getDb();
+  const rows = await sql`
+    DELETE FROM gallery_items
+    WHERE id = ${id}::uuid AND kind = ${kind}
+    RETURNING id, kind, title, type, description, image_url, created_at, updated_at
+  `;
+  if (rows.length === 0) return null;
+  return toDto(rows[0] as unknown as RawGalleryRow);
 }

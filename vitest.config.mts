@@ -18,9 +18,8 @@ export default defineConfig({
     include: ["src/**/*.test.ts"],
     // Fake env values for tests only, so getServerEnv() never reads .env.local.
     env: {
-      SUPABASE_URL: "https://test-project.supabase.co",
-      SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test",
-      SUPABASE_SECRET_KEY: "sb_secret_test",
+      DATABASE_URI: "postgresql://postgres:password@localhost:5432/testdb",
+      SESSION_SECRET: "test-session-secret-key-at-least-32-characters-long",
       CRON_SECRET: "cron-secret-untuk-pengujian",
     },
   },

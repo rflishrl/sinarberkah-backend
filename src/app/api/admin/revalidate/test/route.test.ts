@@ -2,12 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { readBody, sameOriginRequest } from "../../../../../../test/api";
 
-const getUser = vi.fn();
+const getCurrentAdmin = vi.fn();
 const fetchMock = vi.fn();
 
-vi.mock("@/lib/supabase/server", () => ({
-  createSessionClient: async () => ({ auth: { getUser } }),
-  createPublicClient: () => ({}),
+vi.mock("@/lib/auth/session", () => ({
+  getCurrentAdmin: (...args: unknown[]) => getCurrentAdmin(...args),
 }));
 
 const { POST } = await import("@/app/api/admin/revalidate/test/route");
@@ -15,7 +14,7 @@ const { POST } = await import("@/app/api/admin/revalidate/test/route");
 const ADMIN = {
   id: "a1",
   email: "admin@sinarberkah.com",
-  app_metadata: { role: "admin" },
+  role: "admin" as const,
 };
 const call = (headers?: Record<string, string>) =>
   POST(
@@ -29,13 +28,13 @@ beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
   vi.stubEnv("FRONTEND_URL", "https://plato.example.com");
   vi.stubEnv("REVALIDATE_SECRET", "rahasia-uji-123");
-  getUser.mockReset().mockResolvedValue({ data: { user: ADMIN }, error: null });
+  getCurrentAdmin.mockReset().mockResolvedValue(ADMIN);
   fetchMock.mockReset();
 });
 
 describe("POST /api/admin/revalidate/test", () => {
   it("401 tanpa login, plato tidak dipanggil", async () => {
-    getUser.mockResolvedValue({ data: { user: null }, error: new Error("x") });
+    getCurrentAdmin.mockResolvedValue(null);
     expect((await call()).status).toBe(401);
     expect(fetchMock).not.toHaveBeenCalled();
   });

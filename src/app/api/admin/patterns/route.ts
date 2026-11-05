@@ -8,9 +8,8 @@ export const maxDuration = 10;
 /** Admin: list patterns (10 per page). */
 export const GET = withApi(
   { access: "admin" },
-  async ({ request, supabase, actor }) => ({
+  async ({ request, actor }) => ({
     data: await listGallery(
-      supabase,
       { audience: "admin", actor },
       "pattern",
       parseQuery(request, listQuerySchema(10)),
@@ -21,9 +20,8 @@ export const GET = withApi(
 /** Admin: create pattern. */
 export const POST = withApi(
   { access: "admin" },
-  async ({ request, supabase, actor }) => ({
+  async ({ request, actor }) => ({
     data: await createGallery(
-      supabase,
       actor,
       "pattern",
       await readJson(request),

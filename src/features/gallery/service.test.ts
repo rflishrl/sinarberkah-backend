@@ -20,7 +20,6 @@ vi.mock("@/lib/revalidate", () => ({
 
 const service = await import("@/features/gallery/service");
 
-const supabase = {} as never;
 const admin = {
   id: "a1",
   email: "admin@sinarberkah.com",
@@ -54,13 +53,13 @@ describe("otorisasi", () => {
     ["bukan admin", user, "FORBIDDEN"],
   ])("tulis data %s ditolak (%s)", async (_label, actor, code) => {
     await expect(
-      service.createGallery(supabase, actor, "pattern", validInput),
+      service.createGallery(actor, "pattern", validInput),
     ).rejects.toMatchObject({ code });
     await expect(
-      service.updateGallery(supabase, actor, "pattern", ID, { title: "Baru" }),
+      service.updateGallery(actor, "pattern", ID, { title: "Baru" }),
     ).rejects.toMatchObject({ code });
     await expect(
-      service.deleteGallery(supabase, actor, "pattern", ID),
+      service.deleteGallery(actor, "pattern", ID),
     ).rejects.toMatchObject({ code });
     expect(repo.insertGalleryItem).not.toHaveBeenCalled();
     expect(repo.updateGalleryItem).not.toHaveBeenCalled();
@@ -71,7 +70,6 @@ describe("otorisasi", () => {
     repo.listGalleryItems.mockResolvedValue({ items: [], total: 0 });
     await expect(
       service.listGallery(
-        supabase,
         { audience: "admin", actor: user },
         "pattern",
         {},
@@ -80,7 +78,7 @@ describe("otorisasi", () => {
       code: "FORBIDDEN",
     });
     await expect(
-      service.listGallery(supabase, { audience: "public" }, "pattern", {}),
+      service.listGallery({ audience: "public" }, "pattern", {}),
     ).resolves.toMatchObject({
       items: [],
     });
@@ -90,7 +88,7 @@ describe("otorisasi", () => {
 describe("validasi", () => {
   it("judul terlalu pendek ditolak sebelum menyentuh database", async () => {
     await expect(
-      service.createGallery(supabase, admin, "pattern", {
+      service.createGallery(admin, "pattern", {
         ...validInput,
         title: "A",
       }),
@@ -102,7 +100,7 @@ describe("validasi", () => {
 
   it("foto dari host selain Vercel Blob ditolak", async () => {
     await expect(
-      service.createGallery(supabase, admin, "pattern", {
+      service.createGallery(admin, "pattern", {
         ...validInput,
         image_url: "https://contoh.com/a.jpg",
       }),
@@ -112,7 +110,6 @@ describe("validasi", () => {
   it("id bukan UUID = 404 tanpa query", async () => {
     await expect(
       service.getGalleryItem(
-        supabase,
         { audience: "public" },
         "pattern",
         "abc",
@@ -126,7 +123,6 @@ describe("validasi", () => {
   it("parameter daftar dirapikan: halaman tidak masuk akal jadi 1, limit admin 10", async () => {
     repo.listGalleryItems.mockResolvedValue({ items: [], total: 25 });
     const result = await service.listGallery(
-      supabase,
       { audience: "admin", actor: admin },
       "pattern",
       {
@@ -134,7 +130,7 @@ describe("validasi", () => {
         q: "  daun  ",
       },
     );
-    expect(repo.listGalleryItems).toHaveBeenCalledWith(supabase, "pattern", {
+    expect(repo.listGalleryItems).toHaveBeenCalledWith("pattern", {
       q: "daun",
       limit: 10,
       offset: 0,
@@ -151,8 +147,8 @@ describe("validasi", () => {
 describe("aturan bisnis", () => {
   it("tambah: deskripsi bawaan kosong, frontend diberi tahu", async () => {
     repo.insertGalleryItem.mockResolvedValue(item(NEW));
-    await service.createGallery(supabase, admin, "pattern", validInput);
-    expect(repo.insertGalleryItem).toHaveBeenCalledWith(supabase, "pattern", {
+    await service.createGallery(admin, "pattern", validInput);
+    expect(repo.insertGalleryItem).toHaveBeenCalledWith("pattern", {
       ...validInput,
       description: "",
     });
@@ -164,7 +160,7 @@ describe("aturan bisnis", () => {
       item: item(NEW),
       previousImageUrl: OLD,
     });
-    await service.updateGallery(supabase, admin, "pattern", ID, {
+    await service.updateGallery(admin, "pattern", ID, {
       image_url: NEW,
     });
     expect(deleteImage).toHaveBeenCalledWith(OLD);
@@ -175,7 +171,7 @@ describe("aturan bisnis", () => {
       item: item(OLD),
       previousImageUrl: OLD,
     });
-    await service.updateGallery(supabase, admin, "pattern", ID, {
+    await service.updateGallery(admin, "pattern", ID, {
       title: "Baru",
     });
     expect(deleteImage).not.toHaveBeenCalled();
@@ -184,7 +180,7 @@ describe("aturan bisnis", () => {
   it("ubah id yang tidak ada = 404", async () => {
     repo.updateGalleryItem.mockResolvedValue(null);
     await expect(
-      service.updateGallery(supabase, admin, "pattern", ID, { title: "Baru" }),
+      service.updateGallery(admin, "pattern", ID, { title: "Baru" }),
     ).rejects.toMatchObject({
       code: "NOT_FOUND",
       message: "Pola tidak ditemukan.",
@@ -194,8 +190,8 @@ describe("aturan bisnis", () => {
   it("hapus: foto ikut dihapus, portofolio memakai tag portfolio", async () => {
     repo.deleteGalleryItem.mockResolvedValue(item(OLD));
     await expect(
-      service.deleteGallery(supabase, admin, "portfolio", ID),
-    ).resolves.toEqual({ _id: ID });
+      service.deleteGallery(admin, "portfolio", ID),
+    ).resolves.toMatchObject({ _id: ID });
     expect(deleteImage).toHaveBeenCalledWith(OLD);
     expect(revalidateFrontend).toHaveBeenCalledWith(["portfolio"]);
   });

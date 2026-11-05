@@ -12,16 +12,15 @@ type Params = { id: string };
 
 export const GET = withApi<"admin", Params>(
   { access: "admin" },
-  async ({ params, supabase, actor }) => ({
-    data: await getProduct(supabase, { audience: "admin", actor }, params.id),
+  async ({ params, actor }) => ({
+    data: await getProduct({ audience: "admin", actor }, params.id),
   }),
 );
 
 export const PATCH = withApi<"admin", Params>(
   { access: "admin" },
-  async ({ request, params, supabase, actor }) => ({
+  async ({ request, params, actor }) => ({
     data: await updateProductById(
-      supabase,
       actor,
       params.id,
       await readJson(request),
@@ -31,7 +30,7 @@ export const PATCH = withApi<"admin", Params>(
 
 export const DELETE = withApi<"admin", Params>(
   { access: "admin" },
-  async ({ params, supabase, actor }) => ({
-    data: await deleteProductById(supabase, actor, params.id),
+  async ({ params, actor }) => ({
+    data: await deleteProductById(actor, params.id),
   }),
 );

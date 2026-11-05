@@ -21,7 +21,6 @@ import { AppError } from "@/lib/api/errors";
 import { getCurrentAdmin } from "@/lib/auth/session";
 import { getQueryClient } from "@/lib/query/query-client";
 import { listQuerySchema } from "@/lib/schemas/common";
-import { createSessionClient } from "@/lib/supabase/server";
 
 type RawSearchParams = Record<string, string | string[] | undefined>;
 
@@ -49,15 +48,12 @@ export async function GalleryListPage({
   const query = listQuerySchema(10).parse(firstValues(await searchParams));
   const params = { q: query.q ?? "", page: query.page };
 
-  const [supabase, actor] = await Promise.all([
-    createSessionClient(),
-    getCurrentAdmin(),
-  ]);
+  const actor = await getCurrentAdmin();
   const queryClient = getQueryClient();
   await queryClient.prefetchQuery({
     ...galleryListOptions(kind, params),
     queryFn: () =>
-      listGallery(supabase, { audience: "admin", actor }, kind, params),
+      listGallery({ audience: "admin", actor }, kind, params),
   });
 
   return (
@@ -107,17 +103,14 @@ export async function GalleryEditPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [supabase, actor] = await Promise.all([
-    createSessionClient(),
-    getCurrentAdmin(),
-  ]);
+  const actor = await getCurrentAdmin();
   const queryClient = getQueryClient();
 
   try {
     await queryClient.fetchQuery({
       ...galleryDetailOptions(kind, id),
       queryFn: () =>
-        getGalleryItem(supabase, { audience: "admin", actor }, kind, id),
+        getGalleryItem({ audience: "admin", actor }, kind, id),
     });
   } catch (error) {
     if (error instanceof AppError && error.code === "NOT_FOUND") notFound();

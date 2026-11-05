@@ -2,13 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { readBody, sameOriginRequest } from "../../../../../test/api";
 
-const getUser = vi.fn();
+const getCurrentAdmin = vi.fn();
 const insertGalleryItem = vi.fn();
 const listGalleryItems = vi.fn();
 
-vi.mock("@/lib/supabase/server", () => ({
-  createSessionClient: async () => ({ auth: { getUser } }),
-  createPublicClient: () => ({}),
+vi.mock("@/lib/auth/session", () => ({
+  getCurrentAdmin: (...args: unknown[]) => getCurrentAdmin(...args),
 }));
 vi.mock("@/features/gallery/repository", () => ({
   insertGalleryItem: (...args: unknown[]) => insertGalleryItem(...args),
@@ -21,7 +20,7 @@ const { GET, POST } = await import("@/app/api/admin/patterns/route");
 const ADMIN = {
   id: "a1",
   email: "admin@sinarberkah.com",
-  app_metadata: { role: "admin" },
+  role: "admin" as const,
 };
 const body = {
   title: "Pola Daun",
@@ -30,7 +29,7 @@ const body = {
 };
 
 beforeEach(() => {
-  getUser.mockReset().mockResolvedValue({ data: { user: ADMIN }, error: null });
+  getCurrentAdmin.mockReset().mockResolvedValue(ADMIN);
   insertGalleryItem.mockReset();
   listGalleryItems.mockReset();
   vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -38,10 +37,7 @@ beforeEach(() => {
 
 describe("/api/admin/patterns", () => {
   it("GET: 401 tanpa sesi", async () => {
-    getUser.mockResolvedValue({
-      data: { user: null },
-      error: new Error("no session"),
-    });
+    getCurrentAdmin.mockResolvedValue(null);
     expect((await GET(sameOriginRequest("/api/admin/patterns"))).status).toBe(
       401,
     );
@@ -63,7 +59,6 @@ describe("/api/admin/patterns", () => {
       },
     });
     expect(listGalleryItems).toHaveBeenCalledWith(
-      expect.anything(),
       "pattern",
       { q: "daun", limit: 10, offset: 10 },
     );

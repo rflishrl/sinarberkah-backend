@@ -9,8 +9,8 @@ export const maxDuration = 10;
 /** Login admin. Dibatasi 8 percobaan per 10 menit per IP; berhasil = penghitung direset. */
 export const POST = withApi(
   { access: "session", rateLimit: RATE_LIMITS.login },
-  async ({ request, supabase }) => {
-    const result = await login(supabase, await readJson(request));
+  async ({ request }) => {
+    const result = await login(await readJson(request));
     await resetRateLimit(RATE_LIMITS.login, getClientIp(request));
     return { data: result };
   },

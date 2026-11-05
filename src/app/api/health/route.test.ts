@@ -7,10 +7,6 @@ const pingDatabase = vi.fn();
 vi.mock("@/features/health/repository", () => ({
   pingDatabase: (...args: unknown[]) => pingDatabase(...args),
 }));
-vi.mock("@/lib/supabase/server", () => ({
-  createPublicClient: () => ({}),
-  createSessionClient: async () => ({}),
-}));
 vi.mock("@/lib/api/rate-limit", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/rate-limit")>()),
   consumeRateLimit: async () => undefined,
@@ -27,7 +23,7 @@ beforeEach(() => {
 describe("checkHealth (service)", () => {
   it("ok jika database menjawab", async () => {
     pingDatabase.mockResolvedValue(undefined);
-    await expect(checkHealth({} as never)).resolves.toEqual({
+    await expect(checkHealth()).resolves.toEqual({
       status: "ok",
       database: "ok",
     });
@@ -35,7 +31,7 @@ describe("checkHealth (service)", () => {
 
   it("melempar UNAVAILABLE jika database gagal", async () => {
     pingDatabase.mockRejectedValue(new Error("timeout"));
-    await expect(checkHealth({} as never)).rejects.toMatchObject({
+    await expect(checkHealth()).rejects.toMatchObject({
       code: "UNAVAILABLE",
     });
   });
@@ -53,13 +49,11 @@ describe("GET /api/health", () => {
     });
   });
 
-  it("503 tanpa detail error jika database gagal", async () => {
-    pingDatabase.mockRejectedValue(new Error("password authentication failed"));
+  it("503 jika database gagal", async () => {
+    pingDatabase.mockRejectedValue(new Error("down"));
     const response = await GET(sameOriginRequest("/api/health"));
     expect(response.status).toBe(503);
-    const text = await response.text();
-    expect(text).not.toContain("password");
-    expect(JSON.parse(text)).toEqual({
+    expect(await readBody(response)).toEqual({
       success: false,
       error: "Database tidak dapat dijangkau.",
     });

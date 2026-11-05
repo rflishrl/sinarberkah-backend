@@ -20,17 +20,16 @@ import { isUuid } from "@/lib/ids";
 import { revalidateFrontend } from "@/lib/revalidate";
 import { listQuerySchema } from "@/lib/schemas/common";
 import { deleteImage } from "@/lib/storage/blob";
-import type { AppSupabaseClient } from "@/lib/supabase/server";
 
 const LABEL = "Produk";
 const REVALIDATE_TAGS = ["products"];
 
 type Viewer =
-  { audience: "public" } | { audience: "admin"; actor: Actor | null };
+  | { audience: "public" }
+  | { audience: "admin"; actor: Actor | null };
 
 /** Public: active products only, 50/page. Admin: all products, 10/page. */
 export async function listProductsFor(
-  supabase: AppSupabaseClient,
   viewer: Viewer,
   rawQuery: unknown,
 ): Promise<Paginated<ProductDto>> {
@@ -38,7 +37,7 @@ export async function listProductsFor(
   if (isAdmin) assertAdmin(viewer.actor);
 
   const { q, page, limit } = listQuerySchema(isAdmin ? 10 : 50).parse(rawQuery);
-  const { items, total } = await listProducts(supabase, {
+  const { items, total } = await listProducts({
     q,
     limit,
     offset: (page - 1) * limit,
@@ -48,7 +47,6 @@ export async function listProductsFor(
 }
 
 export async function getProduct(
-  supabase: AppSupabaseClient,
   viewer: Viewer,
   id: string,
 ): Promise<ProductDto> {
@@ -56,26 +54,24 @@ export async function getProduct(
   if (isAdmin) assertAdmin(viewer.actor);
 
   const product = isUuid(id)
-    ? await findProduct(supabase, id, { activeOnly: !isAdmin })
+    ? await findProduct(id, { activeOnly: !isAdmin })
     : null;
   if (!product) throw notFound(LABEL);
   return product;
 }
 
 export async function createProduct(
-  supabase: AppSupabaseClient,
   actor: Actor | null,
   rawInput: unknown,
 ): Promise<ProductDto> {
   assertAdmin(actor);
   const input = productCreateSchema.parse(rawInput);
-  const created = await insertProduct(supabase, input);
+  const created = await insertProduct(input);
   revalidateFrontend(REVALIDATE_TAGS);
   return created;
 }
 
 export async function updateProductById(
-  supabase: AppSupabaseClient,
   actor: Actor | null,
   id: string,
   rawInput: unknown,
@@ -85,10 +81,10 @@ export async function updateProductById(
   if (!isUuid(id)) throw notFound(LABEL);
 
   if (Object.keys(input).length === 0) {
-    return getProduct(supabase, { audience: "admin", actor }, id);
+    return getProduct({ audience: "admin", actor }, id);
   }
 
-  const result = await updateProduct(supabase, id, input);
+  const result = await updateProduct(id, input);
   if (!result) throw notFound(LABEL);
 
   if (result.previousImageUrl !== result.item.image.image_url) {
@@ -99,15 +95,16 @@ export async function updateProductById(
 }
 
 export async function deleteProductById(
-  supabase: AppSupabaseClient,
   actor: Actor | null,
   id: string,
-): Promise<{ _id: string }> {
+): Promise<ProductDto> {
   assertAdmin(actor);
-  const removed = isUuid(id) ? await deleteProduct(supabase, id) : null;
-  if (!removed) throw notFound(LABEL);
+  if (!isUuid(id)) throw notFound(LABEL);
 
-  await deleteImage(removed.image.image_url);
+  const deleted = await deleteProduct(id);
+  if (!deleted) throw notFound(LABEL);
+
+  await deleteImage(deleted.image.image_url);
   revalidateFrontend(REVALIDATE_TAGS);
-  return { _id: id };
+  return deleted;
 }

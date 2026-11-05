@@ -12,9 +12,8 @@ type Params = { id: string };
 
 export const GET = withApi<"admin", Params>(
   { access: "admin" },
-  async ({ params, supabase, actor }) => ({
+  async ({ params, actor }) => ({
     data: await getGalleryItem(
-      supabase,
       { audience: "admin", actor },
       "pattern",
       params.id,
@@ -24,9 +23,8 @@ export const GET = withApi<"admin", Params>(
 
 export const PATCH = withApi<"admin", Params>(
   { access: "admin" },
-  async ({ request, params, supabase, actor }) => ({
+  async ({ request, params, actor }) => ({
     data: await updateGallery(
-      supabase,
       actor,
       "pattern",
       params.id,
@@ -37,7 +35,7 @@ export const PATCH = withApi<"admin", Params>(
 
 export const DELETE = withApi<"admin", Params>(
   { access: "admin" },
-  async ({ params, supabase, actor }) => ({
-    data: await deleteGallery(supabase, actor, "pattern", params.id),
+  async ({ params, actor }) => ({
+    data: await deleteGallery(actor, "pattern", params.id),
   }),
 );

@@ -7,9 +7,8 @@ export const maxDuration = 10;
 /** Publik: satu proyek portofolio. */
 export const GET = withApi<"public", { id: string }>(
   { access: "public", rateLimit: RATE_LIMITS.publicRead },
-  async ({ params, supabase }) => ({
+  async ({ params }) => ({
     data: await getGalleryItem(
-      supabase,
       { audience: "public" },
       "portfolio",
       params.id,

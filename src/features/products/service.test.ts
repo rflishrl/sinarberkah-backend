@@ -20,7 +20,6 @@ vi.mock("@/lib/revalidate", () => ({
 
 const service = await import("@/features/products/service");
 
-const supabase = {} as never;
 const admin = {
   id: "a1",
   email: "admin@sinarberkah.com",
@@ -50,35 +49,32 @@ beforeEach(() => {
 describe("otorisasi", () => {
   it("bukan admin tidak bisa menulis", async () => {
     await expect(
-      service.createProduct(supabase, user, { name: "Pagar", price: 1 }),
+      service.createProduct(user, { name: "Pagar", price: 1 }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
     });
     await expect(
-      service.updateProductById(supabase, null, ID, { price: 1 }),
+      service.updateProductById(null, ID, { price: 1 }),
     ).rejects.toMatchObject({
       code: "UNAUTHENTICATED",
     });
     await expect(
-      service.deleteProductById(supabase, user, ID),
+      service.deleteProductById(user, ID),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
     expect(repo.insertProduct).not.toHaveBeenCalled();
   });
 
   it("publik hanya melihat produk aktif, admin melihat semua", async () => {
     repo.listProducts.mockResolvedValue({ items: [], total: 0 });
-    await service.listProductsFor(supabase, { audience: "public" }, {});
+    await service.listProductsFor({ audience: "public" }, {});
     expect(repo.listProducts).toHaveBeenLastCalledWith(
-      supabase,
       expect.objectContaining({ activeOnly: true, limit: 50 }),
     );
     await service.listProductsFor(
-      supabase,
       { audience: "admin", actor: admin },
       {},
     );
     expect(repo.listProducts).toHaveBeenLastCalledWith(
-      supabase,
       expect.objectContaining({ activeOnly: false, limit: 10 }),
     );
   });
@@ -86,9 +82,9 @@ describe("otorisasi", () => {
   it("produk tersembunyi = 404 untuk publik", async () => {
     repo.findProduct.mockResolvedValue(null);
     await expect(
-      service.getProduct(supabase, { audience: "public" }, ID),
+      service.getProduct({ audience: "public" }, ID),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
-    expect(repo.findProduct).toHaveBeenCalledWith(supabase, ID, {
+    expect(repo.findProduct).toHaveBeenCalledWith(ID, {
       activeOnly: true,
     });
   });
@@ -97,7 +93,7 @@ describe("otorisasi", () => {
 describe("validasi", () => {
   it("harga kosong ditolak (bukan dianggap 0)", async () => {
     await expect(
-      service.createProduct(supabase, admin, { name: "Pagar", price: "" }),
+      service.createProduct(admin, { name: "Pagar", price: "" }),
     ).rejects.toMatchObject({
       name: "ZodError",
     });
@@ -105,20 +101,20 @@ describe("validasi", () => {
 
   it("harga negatif dan pecahan ditolak", async () => {
     await expect(
-      service.createProduct(supabase, admin, { name: "Pagar", price: -1 }),
+      service.createProduct(admin, { name: "Pagar", price: -1 }),
     ).rejects.toMatchObject({ name: "ZodError" });
     await expect(
-      service.createProduct(supabase, admin, { name: "Pagar", price: 1.5 }),
+      service.createProduct(admin, { name: "Pagar", price: 1.5 }),
     ).rejects.toMatchObject({ name: "ZodError" });
   });
 
   it("harga berupa teks angka diterima dan nilai bawaan terisi", async () => {
     repo.insertProduct.mockResolvedValue(product(""));
-    await service.createProduct(supabase, admin, {
+    await service.createProduct(admin, {
       name: "Pagar",
       price: "150000",
     });
-    expect(repo.insertProduct).toHaveBeenCalledWith(supabase, {
+    expect(repo.insertProduct).toHaveBeenCalledWith({
       name: "Pagar",
       price: 150000,
       category: "",
@@ -133,7 +129,7 @@ describe("validasi", () => {
 describe("foto", () => {
   it("foto dihapus saat produk dihapus", async () => {
     repo.deleteProduct.mockResolvedValue(product(OLD));
-    await service.deleteProductById(supabase, admin, ID);
+    await service.deleteProductById(admin, ID);
     expect(deleteImage).toHaveBeenCalledWith(OLD);
   });
 
@@ -142,7 +138,7 @@ describe("foto", () => {
       item: product(""),
       previousImageUrl: OLD,
     });
-    await service.updateProductById(supabase, admin, ID, { image_url: "" });
+    await service.updateProductById(admin, ID, { image_url: "" });
     expect(deleteImage).toHaveBeenCalledWith(OLD);
   });
 });

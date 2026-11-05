@@ -8,33 +8,37 @@ export class ConfigError extends Error {
   }
 }
 
-/*
- * Every value is read on the server only, so none of them use the public Next.js
- * prefix. The browser never talks to Supabase.
+/**
+ * Server environment variables.
+ * None use public client prefixes to prevent leaking credentials to the browser.
  */
 const serverEnvSchema = z.object({
-  SUPABASE_URL: z.url({
-    protocol: /^https?$/,
-    error: "must be the Supabase project URL (https://xxxx.supabase.co)",
-  }),
-  SUPABASE_PUBLISHABLE_KEY: z
+  DATABASE_URI: z
     .string()
-    .trim()
-    .startsWith(
-      "sb_publishable_",
-      "must be a publishable key (sb_publishable_...)",
-    ),
-  // Bypasses RLS. Only used in src/lib/supabase/admin.ts.
-  SUPABASE_SECRET_KEY: z
+    .min(1, "must be a valid PostgreSQL connection string")
+    .optional(),
+  DATABASE_URL: z
     .string()
-    .trim()
-    .startsWith("sb_secret_", "must be a secret key (sb_secret_...)"),
+    .min(1, "must be a valid PostgreSQL connection string")
+    .optional(),
+  SESSION_SECRET: z
+    .string()
+    .min(32, "must be at least 32 characters long for secure HMAC signing")
+    .default("sinarberkah_session_secret_default_development_key_minimum_32_characters"),
   BLOB_READ_WRITE_TOKEN: z.string().optional(),
   ALLOWED_ORIGINS: z.string().optional(),
   FRONTEND_URL: z.string().optional(),
   REVALIDATE_SECRET: z.string().optional(),
-  // Sent by Vercel Cron in the Authorization header. Empty = the cron endpoint is off.
   CRON_SECRET: z.string().optional(),
+}).transform((data) => {
+  const uri = data.DATABASE_URI || data.DATABASE_URL;
+  if (!uri) {
+    throw new ConfigError("DATABASE_URI or DATABASE_URL must be provided.");
+  }
+  return {
+    ...data,
+    DATABASE_URI: uri,
+  };
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
@@ -57,10 +61,19 @@ export function getServerEnv(): ServerEnv {
   return cachedServerEnv;
 }
 
+export const env = new Proxy({} as ServerEnv, {
+  get(_target, prop: string | symbol) {
+    return getServerEnv()[prop as keyof ServerEnv];
+  },
+});
+
 /** Frontend origins allowed to read the API from the browser (CORS). */
-export function getAllowedOrigins(): string[] {
-  return (process.env.ALLOWED_ORIGINS ?? "")
+export function getAllowedOrigins(value = process.env.ALLOWED_ORIGINS): string[] {
+  if (!value) return [];
+  return value
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
 }
+
+export const parseAllowedOrigins = getAllowedOrigins;
