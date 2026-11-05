@@ -13,7 +13,7 @@ import type { Tables } from "@/types/database";
 type GalleryRow = Tables<"gallery_items">;
 
 /**
- * Nama kolom `_id` dan `image.image_url` dipertahankan agar frontend lama tetap cocok.
+ * Preserves `_id` and `image.image_url` shapes for backwards compatibility.
  */
 function toDto(row: GalleryRow): GalleryItemDto {
   return {
@@ -35,8 +35,8 @@ export interface ListParams {
 }
 
 /**
- * Daftar + jumlah total. Pencarian lewat RPC (parameter terikat, karakter LIKE diloloskan
- * di SQL), jadi kata kunci tidak pernah masuk ke string filter PostgREST.
+ * Paginated list and total count. Queries via RPC with parameterized LIKE escaping
+ * to prevent SQL injection in PostgREST filters.
  */
 export async function listGalleryItems(
   supabase: AppSupabaseClient,
@@ -104,8 +104,7 @@ export async function insertGalleryItem(
 }
 
 /**
- * Mengubah satu item (baris dikunci di database). Mengembalikan data baru dan URL foto
- * sebelumnya, atau `null` jika id tidak ada.
+ * Updates record with row-level lock; returns updated record and previous image URL or null.
  */
 export async function updateGalleryItem(
   supabase: AppSupabaseClient,
@@ -123,7 +122,7 @@ export async function updateGalleryItem(
   return { item: toDto(row), previousImageUrl };
 }
 
-/** Menghapus satu item. Mengembalikan data yang dihapus, atau `null` jika id tidak ada. */
+/** Deletes record; returns deleted item or null if not found. */
 export async function deleteGalleryItem(
   supabase: AppSupabaseClient,
   kind: GalleryKind,

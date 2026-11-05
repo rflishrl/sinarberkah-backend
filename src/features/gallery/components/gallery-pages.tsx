@@ -35,10 +35,8 @@ function firstValues(raw: RawSearchParams): Record<string, string | undefined> {
 }
 
 /**
- * Daftar: Server Component memanggil service langsung (tanpa lewat HTTP ke dirinya
- * sendiri), mengisi QueryClient, lalu mengirimnya lewat HydrationBoundary. Hasilnya:
- * HTML pertama sudah berisi data, dan client memakai cache yang sama untuk
- * invalidasi setelah tambah/ubah/hapus.
+ * List view: Server Component calls service directly to hydrate initial HTML
+ * and seeds TanStack Query cache for seamless subsequent navigations.
  */
 export async function GalleryListPage({
   kind,
@@ -88,7 +86,7 @@ export async function GalleryListPage({
   );
 }
 
-/** Tambah: tidak ada data awal, jadi tidak ada prefetch. */
+/** Create view: no initial data required. */
 export function GalleryCreatePage({ kind }: { kind: GalleryKind }) {
   return (
     <>
@@ -99,8 +97,7 @@ export function GalleryCreatePage({ kind }: { kind: GalleryKind }) {
 }
 
 /**
- * Ubah: data di-prefetch di server supaya form langsung terisi. Id yang tidak ada
- * menjadi halaman 404 Next.js, bukan form kosong.
+ * Edit view: prefetches data on server; returns 404 if record is not found.
  */
 export async function GalleryEditPage({
   kind,

@@ -28,7 +28,7 @@ const REVALIDATE_TAGS = ["products"];
 type Viewer =
   { audience: "public" } | { audience: "admin"; actor: Actor | null };
 
-/** Publik: hanya produk aktif, 50 per halaman. Admin: semua produk, 10 per halaman. */
+/** Public: active products only, 50/page. Admin: all products, 10/page. */
 export async function listProductsFor(
   supabase: AppSupabaseClient,
   viewer: Viewer,

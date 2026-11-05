@@ -31,7 +31,7 @@ interface GalleryFormProps {
   item?: GalleryItemDto;
 }
 
-/** Form tambah/ubah untuk Portofolio dan Galeri Pola. Skema Zod-nya sama dengan route. */
+/** Create and edit form for Portfolio and Pattern Gallery. Uses matching route Zod schema. */
 export function GalleryForm({ kind, item }: GalleryFormProps) {
   const config = GALLERY_CONFIG[kind];
   const save = useSaveGalleryItem(kind, item?._id);

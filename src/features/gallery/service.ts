@@ -46,7 +46,7 @@ async function list(
   return paginate(items, total, page, limit);
 }
 
-/** Daftar galeri. Publik: 50 per halaman. Admin: 10 per halaman dan wajib admin. */
+/** Gallery listing. Public: 50 items/page. Admin: 10 items/page with auth check. */
 export async function listGallery(
   supabase: AppSupabaseClient,
   viewer: Viewer,
@@ -67,7 +67,7 @@ export async function getGalleryItem(
   id: string,
 ): Promise<GalleryItemDto> {
   if (viewer.audience === "admin") assertAdmin(viewer.actor);
-  // Id yang bukan UUID langsung 404, tanpa menyentuh database.
+  // Non-UUID IDs fail fast as 404 without querying the database.
   const item = isUuid(id) ? await findGalleryItem(supabase, kind, id) : null;
   if (!item) throw notFound(GALLERY_CONFIG[kind].label);
   return item;
@@ -98,14 +98,14 @@ export async function updateGallery(
   if (!isUuid(id)) throw notFound(GALLERY_CONFIG[kind].label);
 
   if (Object.keys(input).length === 0) {
-    // Tidak ada yang diubah: kembalikan data apa adanya.
+    // No fields changed: return existing record.
     return getGalleryItem(supabase, { audience: "admin", actor }, kind, id);
   }
 
   const result = await updateGalleryItem(supabase, kind, id, input);
   if (!result) throw notFound(GALLERY_CONFIG[kind].label);
 
-  // Foto lama dihapus dari penyimpanan jika diganti.
+  // Delete replaced photo from storage.
   if (result.previousImageUrl !== result.item.image.image_url) {
     await deleteImage(result.previousImageUrl);
   }

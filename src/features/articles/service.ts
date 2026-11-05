@@ -8,8 +8,7 @@ export interface ArticleDto {
 }
 
 /**
- * Fitur artikel belum dibuat. Frontend sudah memanggil alamatnya, jadi daftarnya
- * selalu kosong. Belum ada tabel, jadi belum ada repository.
+ * Stub service returning empty article list for frontend compatibility.
  */
 export async function listArticles(): Promise<Paginated<ArticleDto>> {
   return paginate([], 0, 1, 50);

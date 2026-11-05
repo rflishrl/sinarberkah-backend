@@ -10,7 +10,7 @@ export interface GalleryListParams {
   page: number;
 }
 
-/** Query key factory: semua key galeri satu jenis berawalan ["gallery", kind]. */
+/** Query key factory: prefixes gallery queries with ["gallery", kind]. */
 export const galleryKeys = {
   all: (kind: GalleryKind) => ["gallery", kind] as const,
   lists: (kind: GalleryKind) => [...galleryKeys.all(kind), "list"] as const,
@@ -20,12 +20,11 @@ export const galleryKeys = {
     [...galleryKeys.all(kind), "detail", id] as const,
 };
 
-/** Data admin jarang berubah dari tempat lain, jadi 30 detik dianggap masih segar. */
+/** Admin data uses 30-second stale time for responsive cache revalidation. */
 const STALE_TIME = 30_000;
 
 /**
- * Dipakai bersama server dan client. Di server, `queryFn` diganti pemanggilan service
- * langsung saat prefetch; key dan staleTime tetap dari sini supaya hidrasi cocok.
+ * Shared query configuration across server prefetching and client hydration.
  */
 export function galleryListOptions(
   kind: GalleryKind,
@@ -39,7 +38,7 @@ export function galleryListOptions(
         signal,
       ),
     staleTime: STALE_TIME,
-    // Saat pindah halaman/pencarian, data lama tetap tampil sampai data baru datang.
+    // Keeps previous data while paginating or searching to prevent layout flicker.
     placeholderData: keepPreviousData,
   });
 }

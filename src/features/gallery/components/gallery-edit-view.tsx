@@ -9,7 +9,7 @@ import { GalleryForm } from "@/features/gallery/components/gallery-form";
 import { GALLERY_CONFIG, type GalleryKind } from "@/features/gallery/config";
 import { useGalleryItem } from "@/features/gallery/hooks";
 
-/** Halaman ubah: data awal sudah di-prefetch server, jadi biasanya langsung tampil. */
+/** Edit view: data is prefetched on the server for instant form population. */
 export function GalleryEditView({
   kind,
   id,

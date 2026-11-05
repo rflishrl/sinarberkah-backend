@@ -22,7 +22,7 @@ export const productKeys = {
 
 const STALE_TIME = 30_000;
 
-/** Dipakai bersama server (prefetch, queryFn diganti service) dan client. */
+/** Shared query options for server prefetching and client cache hydration. */
 export function productListOptions(params: ProductListParams) {
   return queryOptions({
     queryKey: productKeys.list(params),

@@ -8,8 +8,8 @@ import { useCheckRevalidate } from "@/features/revalidate/hooks";
 import type { RevalidateStatus } from "@/features/revalidate/types";
 
 /**
- * Menunjukkan pengaturan penyegaran situs publik dan menguji jalurnya dari backend ke plato.
- * Nilai rahasia tidak pernah sampai di sini; hanya "terisi" atau "belum diisi".
+ * Displays public site revalidation status and tests connectivity to frontend.
+ * Secrets are never exposed to the client; only boolean presence is indicated.
  */
 export function RevalidateCard({ status }: { status: RevalidateStatus }) {
   const check = useCheckRevalidate();

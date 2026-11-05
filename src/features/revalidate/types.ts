@@ -1,9 +1,9 @@
-/** Tipe bersama server dan client. Tidak boleh mengimpor modul server di sini. */
+/** Shared types across server and client. Must not import server-only modules. */
 
 export interface RevalidateStatus {
-  /** Alamat plato yang dipakai backend, atau `null` jika belum diisi. Bukan rahasia. */
+  /** Frontend base URL used by backend, or null if unset. */
   frontendUrl: string | null;
-  /** Hanya ya atau tidak. Nilai rahasianya tidak pernah dikirim ke browser. */
+  /** Boolean flag indicating presence of secret without revealing token value. */
   hasSecret: boolean;
 }
 
@@ -18,6 +18,6 @@ export type RevalidateCheckState =
 
 export interface RevalidateCheck {
   state: RevalidateCheckState;
-  /** Kalimat yang bisa langsung dibaca admin, lengkap dengan langkah perbaikannya. */
+  /** Human-readable status message with remediation steps. */
   message: string;
 }

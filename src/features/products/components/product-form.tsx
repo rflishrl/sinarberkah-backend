@@ -34,7 +34,7 @@ const Required = () => (
   </span>
 );
 
-/** Form tambah/ubah produk. Skema Zod-nya sama dengan route. */
+/** Product create and edit form sharing validation schemas with API routes. */
 export function ProductForm({ product }: { product?: ProductDto }) {
   const save = useSaveProduct(product?._id);
   const alertRef = useRef<HTMLDivElement>(null);

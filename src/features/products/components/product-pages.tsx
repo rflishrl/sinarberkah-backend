@@ -33,7 +33,7 @@ const first = (raw: RawSearchParams) =>
     ]),
   );
 
-/** Daftar: service dipanggil langsung di server, hasilnya dihidrasi ke TanStack Query. */
+/** List view: calls service directly on server and hydrates TanStack Query cache. */
 export async function ProductListPage({
   searchParams,
 }: {
@@ -79,7 +79,7 @@ export async function ProductListPage({
   );
 }
 
-/** Tambah: tanpa data awal, tanpa prefetch. */
+/** Create view: no initial data required. */
 export function ProductCreatePage() {
   return (
     <>
@@ -89,7 +89,7 @@ export function ProductCreatePage() {
   );
 }
 
-/** Ubah: data di-prefetch supaya form langsung terisi; id tidak ada = 404. */
+/** Edit view: prefetches data to prefill form; returns 404 if record is missing. */
 export async function ProductEditPage({
   params,
 }: {

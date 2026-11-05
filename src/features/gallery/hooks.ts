@@ -25,7 +25,7 @@ export function useGalleryItem(kind: GalleryKind, id: string) {
   return useQuery(galleryDetailOptions(kind, id));
 }
 
-/** Tambah atau ubah. Setelah berhasil: cache galeri dibuang, kembali ke daftar, toast. */
+/** Create or update mutation: invalidates cache, navigates to list, and triggers toast. */
 export function useSaveGalleryItem(kind: GalleryKind, id?: string) {
   const config = GALLERY_CONFIG[kind];
   const router = useRouter();
@@ -46,7 +46,7 @@ export function useSaveGalleryItem(kind: GalleryKind, id?: string) {
   });
 }
 
-/** Hapus. Daftar dimuat ulang dari server; tanpa optimistic update karena tindakannya permanen. */
+/** Delete mutation: invalidates list cache without optimistic updates for permanent deletions. */
 export function useDeleteGalleryItem(kind: GalleryKind) {
   const config = GALLERY_CONFIG[kind];
   const queryClient = useQueryClient();

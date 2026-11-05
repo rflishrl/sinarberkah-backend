@@ -4,9 +4,8 @@ import { toAppError } from "@/lib/supabase/errors";
 import type { AppSupabaseClient } from "@/lib/supabase/server";
 
 /**
- * Semua alamat foto yang masih dipakai produk atau galeri. Harus dipanggil dengan
- * client admin (secret key): pembersihan juga harus melihat produk yang disembunyikan,
- * yang tidak terlihat oleh peran anon karena RLS.
+ * Collects active image URLs referenced in products and gallery.
+ * Requires admin client to query inactive products hidden by public RLS.
  */
 export async function listReferencedImageUrls(
   adminClient: AppSupabaseClient,

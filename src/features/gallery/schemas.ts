@@ -9,13 +9,13 @@ const galleryFields = {
   image_url: blobImageUrl,
 };
 
-/** Dipakai bersama form admin (client) dan route POST (server). */
+/** Shared validation schema for admin form (client) and POST route (server). */
 export const galleryCreateSchema = z.object({
   ...galleryFields,
   description: galleryFields.description.default(""),
 });
 
-/** PATCH: kolom yang tidak dikirim tidak diubah (tanpa nilai bawaan). */
+/** PATCH schema: preserves omitted fields without applying defaults. */
 export const galleryUpdateSchema = z.object(galleryFields).partial();
 
 export type GalleryCreateInput = z.output<typeof galleryCreateSchema>;

@@ -1,20 +1,20 @@
 export type GalleryKind = "portfolio" | "pattern";
 
 export interface GalleryKindConfig {
-  /** Judul di menu dan halaman. */
+  /** Section title displayed in navigation and page headings. */
   title: string;
-  /** Sebutan satu item, untuk tombol dan pesan. */
+  /** Singular label for item actions and notifications. */
   singular: string;
-  /** Nama untuk pesan error, mis. "Pola tidak ditemukan." */
+  /** Entity name used in error messages. */
   label: string;
-  /** API publik (dibaca frontend). */
+  /** Public API endpoint for frontend data fetching. */
   publicApi: string;
-  /** API admin (dibaca dan ditulis panel admin). */
+  /** Admin API endpoint for CRUD operations. */
   adminApi: string;
-  /** Alamat halaman admin. */
+  /** Admin route path. */
   adminPath: string;
   uploadFolder: "portfolio" | "patterns";
-  /** Tag cache di frontend yang dibuang saat data ini berubah. */
+  /** Frontend cache tag invalidated on mutations. */
   revalidateTags: string[];
   typeLabel: string;
   typeHint: string;
@@ -50,7 +50,7 @@ export const GALLERY_CONFIG: Record<GalleryKind, GalleryKindConfig> = {
   },
 };
 
-/** Jumlah baris per halaman di panel admin. */
+/** Page size for admin data tables. */
 export const ADMIN_PAGE_SIZE = 10;
-/** Jumlah baris bawaan untuk API publik. */
+/** Default page size for public queries. */
 export const PUBLIC_PAGE_SIZE = 50;

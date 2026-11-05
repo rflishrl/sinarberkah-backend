@@ -8,10 +8,10 @@ import type { Actor } from "@/lib/auth/actor";
 import { assertAdmin } from "@/lib/auth/authorize";
 import { readRevalidateConfig, sendRevalidate } from "@/lib/revalidate";
 
-/** Tag yang dipakai untuk uji. Menyegarkan daftar produk tidak berbahaya. */
+/** Test tag for connectivity checks. Revalidating product list is safe and idempotent. */
 const TEST_TAGS = ["products"];
 
-/** Pengaturan penyegaran yang dibaca backend sekarang (tanpa nilai rahasia). */
+/** Current revalidation configuration without exposing secret tokens. */
 export function getRevalidateStatus(actor: Actor | null): RevalidateStatus {
   assertAdmin(actor);
   const { baseUrl, secret } = readRevalidateConfig();
@@ -19,8 +19,7 @@ export function getRevalidateStatus(actor: Actor | null): RevalidateStatus {
 }
 
 /**
- * Memanggil plato dari backend, persis seperti saat admin menyimpan data, lalu
- * menerjemahkan jawabannya menjadi kalimat yang menunjuk bagian mana yang salah.
+ * Dispatches revalidation request to frontend and translates response into human-readable diagnostics.
  */
 export async function checkRevalidate(
   actor: Actor | null,

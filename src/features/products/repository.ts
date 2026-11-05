@@ -11,7 +11,7 @@ import type { Tables } from "@/types/database";
 
 type ProductRow = Tables<"products">;
 
-/** Nama kolom `_id`, `image.image_url`, dan `isActive` dipertahankan untuk frontend lama. */
+/** Preserves legacy column names for backwards compatibility. */
 function toDto(row: ProductRow): ProductDto {
   return {
     _id: row.id,
@@ -26,7 +26,7 @@ function toDto(row: ProductRow): ProductDto {
   };
 }
 
-/** Input camelCase -> kolom snake_case. Kolom yang tidak dikirim tidak ikut. */
+/** Maps camelCase input to snake_case columns. Omitted fields are excluded. */
 function toColumns(input: ProductUpdateInput) {
   return {
     ...(input.name !== undefined && { name: input.name }),
@@ -42,7 +42,7 @@ export interface ListParams {
   q?: string;
   limit: number;
   offset: number;
-  /** `true`: hanya produk aktif. RLS juga menyaring untuk pembaca publik. */
+  /** When true, queries active products only; RLS enforces equivalent public access. */
   activeOnly: boolean;
 }
 
@@ -99,7 +99,7 @@ export async function insertProduct(
   return toDto(data);
 }
 
-/** Baris dikunci di database (RPC update_product). `null` jika id tidak ada. */
+/** Updates row with row-level database lock (RPC update_product); returns null if not found. */
 export async function updateProduct(
   supabase: AppSupabaseClient,
   id: string,

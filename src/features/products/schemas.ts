@@ -10,7 +10,7 @@ const productFields = {
   name: requiredText("Nama produk", 120),
   category: optionalText("Kategori", 60),
   description: optionalText("Deskripsi", 2000),
-  // Kolom kosong di form dianggap belum diisi (bukan 0).
+  // Empty form inputs evaluate to undefined rather than 0.
   price: z.preprocess(
     (value) => (value === "" || value === null ? undefined : value),
     z.coerce
@@ -23,7 +23,7 @@ const productFields = {
   isActive: z.boolean(),
 };
 
-/** Dipakai bersama form admin (client) dan route POST (server). */
+/** Shared validation schema for admin form (client) and POST route (server). */
 export const productCreateSchema = z.object({
   ...productFields,
   category: productFields.category.default(""),
@@ -32,7 +32,7 @@ export const productCreateSchema = z.object({
   isActive: productFields.isActive.default(true),
 });
 
-/** PATCH: kolom yang tidak dikirim tidak diubah. */
+/** PATCH schema: preserves omitted fields without overriding existing values. */
 export const productUpdateSchema = z.object(productFields).partial();
 
 export type ProductCreateInput = z.output<typeof productCreateSchema>;
