@@ -22,6 +22,10 @@ const serverEnvSchema = z
       .string()
       .min(1, "must be a valid PostgreSQL connection string")
       .optional(),
+    POSTGRES_URL: z
+      .string()
+      .min(1, "must be a valid PostgreSQL connection string")
+      .optional(),
     SESSION_SECRET: z
       .string()
       .min(32, "must be at least 32 characters long for secure HMAC signing")
@@ -35,9 +39,11 @@ const serverEnvSchema = z
     CRON_SECRET: z.string().optional(),
   })
   .transform((data) => {
-    const uri = data.DATABASE_URI || data.DATABASE_URL;
+    const uri = data.DATABASE_URI || data.DATABASE_URL || data.POSTGRES_URL;
     if (!uri) {
-      throw new ConfigError("DATABASE_URI or DATABASE_URL must be provided.");
+      throw new ConfigError(
+        "DATABASE_URI, DATABASE_URL, or POSTGRES_URL must be provided.",
+      );
     }
     return {
       ...data,

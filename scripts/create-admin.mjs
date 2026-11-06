@@ -1,18 +1,36 @@
 // Membuat atau memperbarui akun admin di database Neon PostgreSQL.
 // Password diketik di terminal dan tidak ditampilkan di shell history.
 //
-// Butuh di .env.local: DATABASE_URI atau DATABASE_URL.
+// Butuh di .env.local: DATABASE_URI, DATABASE_URL, atau POSTGRES_URL.
 // Pemakaian: npm run create-admin -- admin@sinarberkah.com
 
+import fs from "node:fs";
+import path from "node:path";
 import { randomBytes, scryptSync } from "node:crypto";
 import { createInterface } from "node:readline";
 import { neon } from "@neondatabase/serverless";
 
-const databaseUrl = process.env.DATABASE_URI || process.env.DATABASE_URL;
+// Automatically load local env file if not already provided via shell
+for (const envFile of [".env.local", ".env.production.local", ".env"]) {
+  const envPath = path.resolve(process.cwd(), envFile);
+  if (fs.existsSync(envPath)) {
+    try {
+      process.loadEnvFile(envPath);
+      break;
+    } catch {}
+  }
+}
+
+const databaseUrl =
+  process.env.DATABASE_URI ||
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_URL;
 const email = process.argv[2]?.trim().toLowerCase();
 
 if (!databaseUrl) {
-  console.error("Isi DATABASE_URI atau DATABASE_URL di .env.local.");
+  console.error(
+    "Isi DATABASE_URI, DATABASE_URL, atau POSTGRES_URL di .env.local.",
+  );
   process.exit(1);
 }
 if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
