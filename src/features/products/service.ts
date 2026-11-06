@@ -25,8 +25,7 @@ const LABEL = "Produk";
 const REVALIDATE_TAGS = ["products"];
 
 type Viewer =
-  | { audience: "public" }
-  | { audience: "admin"; actor: Actor | null };
+  { audience: "public" } | { audience: "admin"; actor: Actor | null };
 
 /** Public: active products only, 50/page. Admin: all products, 10/page. */
 export async function listProductsFor(

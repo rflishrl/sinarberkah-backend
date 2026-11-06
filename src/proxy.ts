@@ -12,7 +12,11 @@ function isValidSessionToken(token: string, secret: string): boolean {
     const raw = Buffer.from(payloadB64, "base64url").toString("utf-8");
     const payload = JSON.parse(raw);
     const now = Math.floor(Date.now() / 1000);
-    return typeof payload.exp === "number" && payload.exp > now && payload.role === "admin";
+    return (
+      typeof payload.exp === "number" &&
+      payload.exp > now &&
+      payload.role === "admin"
+    );
   } catch {
     return false;
   }

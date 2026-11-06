@@ -45,8 +45,7 @@ export async function ProductListPage({
   const queryClient = getQueryClient();
   await queryClient.prefetchQuery({
     ...productListOptions(params),
-    queryFn: () =>
-      listProductsFor({ audience: "admin", actor }, params),
+    queryFn: () => listProductsFor({ audience: "admin", actor }, params),
   });
 
   return (

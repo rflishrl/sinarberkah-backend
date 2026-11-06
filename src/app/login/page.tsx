@@ -37,7 +37,7 @@ export default async function LoginPage() {
               SB
             </span>
             <div>
-              <CardTitle className="font-heading text-xl font-extrabold uppercase tracking-wide text-foreground">
+              <CardTitle className="font-heading text-xl font-extrabold tracking-wide text-foreground uppercase">
                 Sinar Berkah
               </CardTitle>
               <CardDescription className="text-sm text-muted-foreground">

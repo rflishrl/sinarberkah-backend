@@ -28,8 +28,7 @@ import { listQuerySchema } from "@/lib/schemas/common";
 import { deleteImage } from "@/lib/storage/blob";
 
 type Viewer =
-  | { audience: "public" }
-  | { audience: "admin"; actor: Actor | null };
+  { audience: "public" } | { audience: "admin"; actor: Actor | null };
 
 async function list(
   kind: GalleryKind,

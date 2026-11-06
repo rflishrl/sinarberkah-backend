@@ -58,10 +58,11 @@ describe("/api/admin/patterns", () => {
         pagination: { total: 0, page: 2, limit: 10, totalPages: 0 },
       },
     });
-    expect(listGalleryItems).toHaveBeenCalledWith(
-      "pattern",
-      { q: "daun", limit: 10, offset: 10 },
-    );
+    expect(listGalleryItems).toHaveBeenCalledWith("pattern", {
+      q: "daun",
+      limit: 10,
+      offset: 10,
+    });
   });
 
   it("POST: 201 untuk data valid", async () => {

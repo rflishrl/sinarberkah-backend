@@ -152,11 +152,11 @@ export function GalleryListView({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.items.map((item) => (
+            {data.items.map((item, index) => (
               <TableRow key={item._id}>
                 <TableCell className="px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <Thumb src={item.image.image_url} />
+                    <Thumb src={item.image.image_url} priority={index < 4} />
                     <p className="min-w-0 truncate font-semibold">
                       {item.title}
                     </p>
@@ -179,10 +179,10 @@ export function GalleryListView({
 
       {/* HP: kartu */}
       <ul className="space-y-3 md:hidden">
-        {data.items.map((item) => (
+        {data.items.map((item, index) => (
           <li key={item._id} className="rounded-lg bg-card p-4 shadow-card">
             <div className="flex gap-3">
-              <Thumb src={item.image.image_url} />
+              <Thumb src={item.image.image_url} priority={index < 3} />
               <div className="min-w-0 flex-1">
                 <p className="font-semibold">{item.title}</p>
                 <Badge variant="secondary" className="mt-1">

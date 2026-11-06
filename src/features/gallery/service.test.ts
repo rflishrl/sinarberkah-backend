@@ -69,11 +69,7 @@ describe("otorisasi", () => {
   it("daftar admin butuh admin, daftar publik tidak", async () => {
     repo.listGalleryItems.mockResolvedValue({ items: [], total: 0 });
     await expect(
-      service.listGallery(
-        { audience: "admin", actor: user },
-        "pattern",
-        {},
-      ),
+      service.listGallery({ audience: "admin", actor: user }, "pattern", {}),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
     });
@@ -109,11 +105,7 @@ describe("validasi", () => {
 
   it("id bukan UUID = 404 tanpa query", async () => {
     await expect(
-      service.getGalleryItem(
-        { audience: "public" },
-        "pattern",
-        "abc",
-      ),
+      service.getGalleryItem({ audience: "public" }, "pattern", "abc"),
     ).rejects.toMatchObject({
       code: "NOT_FOUND",
     });

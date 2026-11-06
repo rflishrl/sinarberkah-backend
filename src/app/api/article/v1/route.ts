@@ -7,6 +7,9 @@ export const maxDuration = 10;
 export const GET = withApi(
   { access: "public", rateLimit: RATE_LIMITS.publicRead },
   async () => ({
-    data: { items: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 0 } },
+    data: {
+      items: [],
+      pagination: { total: 0, page: 1, limit: 10, totalPages: 0 },
+    },
   }),
 );

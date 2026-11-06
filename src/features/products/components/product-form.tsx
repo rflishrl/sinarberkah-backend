@@ -27,6 +27,7 @@ import {
   type ProductDto,
   type ProductFormValues,
 } from "@/features/products/schemas";
+import { formatRupiah } from "@/lib/utils";
 
 const Required = () => (
   <span aria-hidden="true" className="text-destructive">
@@ -109,18 +110,29 @@ export function ProductForm({ product }: { product?: ProductDto }) {
                     Harga (Rp) <Required />
                   </FieldLabel>
                   <Input
-                    {...field}
-                    value={field.value === undefined ? "" : String(field.value)}
                     id="product-price"
-                    type="number"
+                    type="text"
                     inputMode="numeric"
-                    min={0}
-                    step={1}
+                    pattern="[0-9]*"
+                    value={field.value === undefined ? "" : String(field.value)}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, "");
+                      field.onChange(digits === "" ? "" : Number(digits));
+                    }}
+                    onBlur={field.onBlur}
+                    name={field.name}
+                    ref={field.ref}
                     required
                     aria-invalid={fieldState.invalid}
-                    aria-describedby="product-price-error"
+                    aria-describedby="product-price-hint product-price-error"
+                    placeholder="Contoh: 150000"
                     className="h-11 bg-card"
                   />
+                  <FieldDescription id="product-price-hint">
+                    {field.value
+                      ? `Pratinjau: ${formatRupiah(Number(field.value))}`
+                      : "Masukkan angka tanpa tanda titik atau koma."}
+                  </FieldDescription>
                   {fieldState.invalid && (
                     <FieldError
                       id="product-price-error"

@@ -77,7 +77,9 @@ export async function getCurrentAdmin(): Promise<AuthenticatedActor | null> {
   return verifySessionToken(token);
 }
 
-export async function setAdminSessionCookie(actor: AuthenticatedActor): Promise<void> {
+export async function setAdminSessionCookie(
+  actor: AuthenticatedActor,
+): Promise<void> {
   const token = signSessionToken(actor);
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE_NAME, token, {

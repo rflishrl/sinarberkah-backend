@@ -8,10 +8,6 @@ export const maxDuration = 10;
 export const GET = withApi<"public", { id: string }>(
   { access: "public", rateLimit: RATE_LIMITS.publicRead },
   async ({ params }) => ({
-    data: await getGalleryItem(
-      { audience: "public" },
-      "pattern",
-      params.id,
-    ),
+    data: await getGalleryItem({ audience: "public" }, "pattern", params.id),
   }),
 );

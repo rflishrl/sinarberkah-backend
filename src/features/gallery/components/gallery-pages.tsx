@@ -52,8 +52,7 @@ export async function GalleryListPage({
   const queryClient = getQueryClient();
   await queryClient.prefetchQuery({
     ...galleryListOptions(kind, params),
-    queryFn: () =>
-      listGallery({ audience: "admin", actor }, kind, params),
+    queryFn: () => listGallery({ audience: "admin", actor }, kind, params),
   });
 
   return (
@@ -109,8 +108,7 @@ export async function GalleryEditPage({
   try {
     await queryClient.fetchQuery({
       ...galleryDetailOptions(kind, id),
-      queryFn: () =>
-        getGalleryItem({ audience: "admin", actor }, kind, id),
+      queryFn: () => getGalleryItem({ audience: "admin", actor }, kind, id),
     });
   } catch (error) {
     if (error instanceof AppError && error.code === "NOT_FOUND") notFound();

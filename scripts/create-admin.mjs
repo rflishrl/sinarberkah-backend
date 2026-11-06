@@ -46,7 +46,9 @@ function askHidden(question) {
   });
 }
 
-const password = await askHidden(`Password untuk ${email} (minimal 8 karakter): `);
+const password = await askHidden(
+  `Password untuk ${email} (minimal 8 karakter): `,
+);
 if (password.length < 8) {
   console.error("Password minimal 8 karakter.");
   process.exit(1);
@@ -72,7 +74,9 @@ try {
     RETURNING id, email, role
   `;
 
-  console.log(`Akun admin berhasil disimpan: ${rows[0].email} (ID: ${rows[0].id})`);
+  console.log(
+    `Akun admin berhasil disimpan: ${rows[0].email} (ID: ${rows[0].id})`,
+  );
 } catch (err) {
   console.error("Gagal menyimpan akun admin:", err);
   process.exit(1);

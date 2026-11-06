@@ -54,15 +54,15 @@ copy .env.example .env.local      # Windows
 # cp .env.example .env.local      # macOS / Linux
 ```
 
-| Variable                | Value                                                                                                |
-| ----------------------- | ---------------------------------------------------------------------------------------------------- |
-| `DATABASE_URI`          | Neon PostgreSQL connection string (`postgresql://...`). Can also use `DATABASE_URL`.                |
-| `SESSION_SECRET`        | 64+ character random secret string used to sign HMAC-SHA256 session cookies.                         |
-| `BLOB_READ_WRITE_TOKEN` | Vercel Blob token. Photo uploads stay disabled without it.                                           |
-| `ALLOWED_ORIGINS`       | Frontend addresses allowed to read the API from a browser (CORS), separated by commas.               |
-| `FRONTEND_URL`          | Frontend address. The backend calls its `/api/revalidate` after saves or deletes.                     |
-| `REVALIDATE_SECRET`     | Shared secret for cache revalidation. Use the same value in the frontend.                            |
-| `CRON_SECRET`           | Secret for the daily photo cleanup cron. Vercel sends it automatically.                              |
+| Variable                | Value                                                                                  |
+| ----------------------- | -------------------------------------------------------------------------------------- |
+| `DATABASE_URI`          | Neon PostgreSQL connection string (`postgresql://...`). Can also use `DATABASE_URL`.   |
+| `SESSION_SECRET`        | 64+ character random secret string used to sign HMAC-SHA256 session cookies.           |
+| `BLOB_READ_WRITE_TOKEN` | Vercel Blob token. Photo uploads stay disabled without it.                             |
+| `ALLOWED_ORIGINS`       | Frontend addresses allowed to read the API from a browser (CORS), separated by commas. |
+| `FRONTEND_URL`          | Frontend address. The backend calls its `/api/revalidate` after saves or deletes.      |
+| `REVALIDATE_SECRET`     | Shared secret for cache revalidation. Use the same value in the frontend.              |
+| `CRON_SECRET`           | Secret for the daily photo cleanup cron. Vercel sends it automatically.                |
 
 Generate a random session secret:
 
@@ -96,13 +96,13 @@ Open http://localhost:4000/login to access the admin panel.
 
 ## Scripts
 
-| Command                    | Purpose                       |
-| -------------------------- | ----------------------------- |
-| `npm run dev`              | Dev server                    |
-| `npm run build`            | Production build              |
-| `npm run typecheck`        | TypeScript check              |
-| `npm run lint`             | ESLint                        |
-| `npm run test`             | Run Vitest test suite         |
-| `npm run check:boundaries` | Check architectural boundaries|
-| `npm run db:push`          | Push schema to Neon database  |
-| `npm run create-admin`     | Create or update admin user   |
+| Command                    | Purpose                        |
+| -------------------------- | ------------------------------ |
+| `npm run dev`              | Dev server                     |
+| `npm run build`            | Production build               |
+| `npm run typecheck`        | TypeScript check               |
+| `npm run lint`             | ESLint                         |
+| `npm run test`             | Run Vitest test suite          |
+| `npm run check:boundaries` | Check architectural boundaries |
+| `npm run db:push`          | Push schema to Neon database   |
+| `npm run create-admin`     | Create or update admin user    |

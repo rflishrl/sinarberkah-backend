@@ -58,9 +58,9 @@ describe("otorisasi", () => {
     ).rejects.toMatchObject({
       code: "UNAUTHENTICATED",
     });
-    await expect(
-      service.deleteProductById(user, ID),
-    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(service.deleteProductById(user, ID)).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
     expect(repo.insertProduct).not.toHaveBeenCalled();
   });
 
@@ -70,10 +70,7 @@ describe("otorisasi", () => {
     expect(repo.listProducts).toHaveBeenLastCalledWith(
       expect.objectContaining({ activeOnly: true, limit: 50 }),
     );
-    await service.listProductsFor(
-      { audience: "admin", actor: admin },
-      {},
-    );
+    await service.listProductsFor({ audience: "admin", actor: admin }, {});
     expect(repo.listProducts).toHaveBeenLastCalledWith(
       expect.objectContaining({ activeOnly: false, limit: 10 }),
     );

@@ -122,7 +122,8 @@ export async function updateProduct(
 ): Promise<{ item: ProductDto; previousImageUrl: string } | null> {
   const sql = getDb();
 
-  const existing = await sql`SELECT image_url FROM products WHERE id = ${id}::uuid LIMIT 1`;
+  const existing =
+    await sql`SELECT image_url FROM products WHERE id = ${id}::uuid LIMIT 1`;
   if (existing.length === 0) return null;
   const previousImageUrl = (existing[0] as { image_url: string }).image_url;
 

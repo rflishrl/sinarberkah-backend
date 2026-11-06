@@ -138,11 +138,11 @@ export function ProductListView({ params }: { params: ProductListParams }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.items.map((product) => (
+            {data.items.map((product, index) => (
               <TableRow key={product._id}>
                 <TableCell className="px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <Thumb src={product.image.image_url} />
+                    <Thumb src={product.image.image_url} priority={index < 4} />
                     <div className="min-w-0">
                       <p className="truncate font-semibold">{product.name}</p>
                       <p className="truncate text-muted-foreground">
@@ -167,10 +167,10 @@ export function ProductListView({ params }: { params: ProductListParams }) {
       </div>
 
       <ul className="space-y-3 md:hidden">
-        {data.items.map((product) => (
+        {data.items.map((product, index) => (
           <li key={product._id} className="rounded-lg bg-card p-4 shadow-card">
             <div className="flex gap-3">
-              <Thumb src={product.image.image_url} />
+              <Thumb src={product.image.image_url} priority={index < 3} />
               <div className="min-w-0 flex-1">
                 <p className="font-semibold">{product.name}</p>
                 <p className="text-sm text-muted-foreground">

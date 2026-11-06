@@ -73,7 +73,8 @@ export async function listGalleryItems(
 
 export async function countGalleryItems(kind: GalleryKind): Promise<number> {
   const sql = getDb();
-  const rows = await sql`SELECT COUNT(*)::int AS count FROM gallery_items WHERE kind = ${kind}`;
+  const rows =
+    await sql`SELECT COUNT(*)::int AS count FROM gallery_items WHERE kind = ${kind}`;
   return Number(rows[0]?.count || 0);
 }
 
@@ -119,7 +120,8 @@ export async function updateGalleryItem(
 ): Promise<{ item: GalleryItemDto; previousImageUrl: string } | null> {
   const sql = getDb();
 
-  const existing = await sql`SELECT image_url FROM gallery_items WHERE id = ${id}::uuid AND kind = ${kind} LIMIT 1`;
+  const existing =
+    await sql`SELECT image_url FROM gallery_items WHERE id = ${id}::uuid AND kind = ${kind} LIMIT 1`;
   if (existing.length === 0) return null;
   const previousImageUrl = (existing[0] as { image_url: string }).image_url;
 
