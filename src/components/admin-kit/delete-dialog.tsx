@@ -77,7 +77,7 @@ export function DeleteDialog({ itemName, onConfirm }: DeleteDialogProps) {
           </p>
         )}
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={deleting} className="h-11">
+          <AlertDialogCancel disabled={deleting} autoFocus className="h-11">
             Batal
           </AlertDialogCancel>
           {/* Bukan AlertDialogAction: dialog baru ditutup setelah penghapusan berhasil. */}

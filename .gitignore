@@ -8,6 +8,8 @@ next-env.d.ts
 
 # production
 /build
+/.output/
+/.nitro/
 
 # typescript
 *.tsbuildinfo

@@ -1,10 +1,12 @@
-"use client";
-
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertCircleIcon, EyeIcon, EyeOffIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
+import {
+  TurnstileField,
+  type TurnstileFieldHandle,
+} from "@/components/turnstile-field";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,15 +17,16 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useLogin } from "@/features/auth/hooks";
-import { loginSchema, type LoginInput } from "@/features/auth/schemas";
+import { type LoginInput, loginSchema } from "@/features/auth/schemas";
 
 export function LoginForm() {
   const login = useLogin();
   const alertRef = useRef<HTMLDivElement>(null);
+  const turnstileRef = useRef<TurnstileFieldHandle>(null);
   const [showPassword, setShowPassword] = useState(false);
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
+    defaultValues: { email: "", password: "", turnstileToken: "" },
   });
 
   // Focus server error message so screen readers announce it immediately.
@@ -32,11 +35,21 @@ export function LoginForm() {
   }, [login.error]);
 
   const busy = login.isPending || login.isSuccess;
+  const turnstileToken = form.watch("turnstileToken");
+  const canSubmit = !busy && Boolean(turnstileToken);
+
+  const handleSubmit = (values: LoginInput) => {
+    login.mutate(values, {
+      onSettled: () => {
+        turnstileRef.current?.reset();
+      },
+    });
+  };
 
   return (
     <form
       noValidate
-      onSubmit={form.handleSubmit((values) => login.mutate(values))}
+      onSubmit={form.handleSubmit(handleSubmit)}
       className="space-y-5"
     >
       {login.error && (
@@ -125,7 +138,27 @@ export function LoginForm() {
         />
       </FieldGroup>
 
-      <Button type="submit" size="lg" className="h-11 w-full" disabled={busy}>
+      <div className="flex flex-col items-center">
+        <TurnstileField
+          ref={turnstileRef}
+          action="login"
+          onToken={(token) =>
+            form.setValue("turnstileToken", token, { shouldValidate: true })
+          }
+        />
+        {form.formState.errors.turnstileToken && (
+          <p className="text-xs text-destructive mt-1">
+            {form.formState.errors.turnstileToken.message}
+          </p>
+        )}
+      </div>
+
+      <Button
+        type="submit"
+        size="lg"
+        className="h-11 w-full"
+        disabled={!canSubmit}
+      >
         {busy ? "Memeriksa..." : "Masuk"}
       </Button>
     </form>

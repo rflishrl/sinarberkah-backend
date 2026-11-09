@@ -1,6 +1,7 @@
 /** Standard API response envelope shared across server handlers and client callers. */
 export type ApiResponse<T> =
-  { success: true; data: T } | { success: false; error: string };
+  | { success: true; data: T }
+  | { success: false; error: string };
 
 export interface Pagination {
   total: number;

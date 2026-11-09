@@ -3,8 +3,8 @@ import "server-only";
 import {
   ADMIN_PAGE_SIZE,
   GALLERY_CONFIG,
-  PUBLIC_PAGE_SIZE,
   type GalleryKind,
+  PUBLIC_PAGE_SIZE,
 } from "@/features/gallery/config";
 import {
   deleteGalleryItem,
@@ -14,12 +14,12 @@ import {
   updateGalleryItem,
 } from "@/features/gallery/repository";
 import {
+  type GalleryItemDto,
   galleryCreateSchema,
   galleryUpdateSchema,
-  type GalleryItemDto,
 } from "@/features/gallery/schemas";
 import { notFound } from "@/lib/api/errors";
-import { paginate, type Paginated } from "@/lib/api/types";
+import { type Paginated, paginate } from "@/lib/api/types";
 import type { Actor } from "@/lib/auth/actor";
 import { assertAdmin } from "@/lib/auth/authorize";
 import { isUuid } from "@/lib/ids";
@@ -28,7 +28,8 @@ import { listQuerySchema } from "@/lib/schemas/common";
 import { deleteImage } from "@/lib/storage/blob";
 
 type Viewer =
-  { audience: "public" } | { audience: "admin"; actor: Actor | null };
+  | { audience: "public" }
+  | { audience: "admin"; actor: Actor | null };
 
 async function list(
   kind: GalleryKind,

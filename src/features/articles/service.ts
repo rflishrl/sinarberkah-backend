@@ -1,6 +1,6 @@
 import "server-only";
 
-import { paginate, type Paginated } from "@/lib/api/types";
+import { type Paginated, paginate } from "@/lib/api/types";
 
 export interface ArticleDto {
   _id: string;

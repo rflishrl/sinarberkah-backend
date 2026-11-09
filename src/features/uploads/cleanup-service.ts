@@ -2,6 +2,7 @@ import "server-only";
 
 import { listReferencedImageUrls } from "@/features/uploads/repository";
 import { AppError } from "@/lib/api/errors";
+import { purgeExpiredRateLimits } from "@/lib/api/rate-limit";
 import { safeEqual } from "@/lib/crypto";
 import { getServerEnv } from "@/lib/env";
 import { log } from "@/lib/log";
@@ -11,7 +12,7 @@ import { deleteOrphanImages } from "@/lib/storage/blob";
 const MIN_ORPHAN_AGE_MS = 24 * 60 * 60 * 1000;
 
 /**
- * Cleans up orphaned uploads via Vercel Cron.
+ * Cleans up orphaned uploads and expired rate limits via Vercel Cron.
  * Validates `Authorization: Bearer <CRON_SECRET>` with constant-time equality check.
  */
 export async function cleanupOrphanImages(
@@ -23,11 +24,15 @@ export async function cleanupOrphanImages(
     throw new AppError("UNAUTHENTICATED", "Tidak diizinkan.");
   }
 
+  const purgedRateLimits = await purgeExpiredRateLimits();
   const referenced = await listReferencedImageUrls();
   const result = await deleteOrphanImages(
     referenced,
     new Date(Date.now() - MIN_ORPHAN_AGE_MS),
   );
-  log("info", "pembersihan foto selesai", result);
+  log("info", "pembersihan foto dan rate limit selesai", {
+    ...result,
+    purgedRateLimits,
+  });
   return result;
 }

@@ -1,9 +1,6 @@
 import "server-only";
 
 import { z } from "zod";
-
-import type { Actor } from "@/lib/auth/actor";
-import { getCurrentAdmin } from "@/lib/auth/session";
 import { AppError } from "@/lib/api/errors";
 import {
   consumeRateLimit,
@@ -12,6 +9,8 @@ import {
 } from "@/lib/api/rate-limit";
 import { assertSameOrigin, isSafeMethod } from "@/lib/api/request";
 import type { ApiResponse } from "@/lib/api/types";
+import type { Actor } from "@/lib/auth/actor";
+import { getCurrentAdmin } from "@/lib/auth/session";
 import { ConfigError, getAllowedOrigins } from "@/lib/env";
 import { log } from "@/lib/log";
 
@@ -93,8 +92,35 @@ function applyCors(request: Request, response: Response): void {
   const origin = request.headers.get("origin");
   if (origin && getAllowedOrigins().includes(origin)) {
     response.headers.set("Access-Control-Allow-Origin", origin);
+    response.headers.set(
+      "Access-Control-Allow-Methods",
+      "GET, POST, PATCH, DELETE, OPTIONS",
+    );
+    response.headers.set(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization, x-request-id",
+    );
     response.headers.append("Vary", "Origin");
   }
+}
+
+export function handlePreflight(request: Request): Response {
+  const origin = request.headers.get("origin");
+  const headers = new Headers();
+  if (origin && getAllowedOrigins().includes(origin)) {
+    headers.set("Access-Control-Allow-Origin", origin);
+    headers.set(
+      "Access-Control-Allow-Methods",
+      "GET, POST, PATCH, DELETE, OPTIONS",
+    );
+    headers.set(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization, x-request-id",
+    );
+    headers.set("Access-Control-Max-Age", "86400");
+    headers.append("Vary", "Origin");
+  }
+  return new Response(null, { status: 204, headers });
 }
 
 /**
@@ -111,11 +137,30 @@ export function withApi<
   handler: (context: ApiContext<A, P>) => Promise<ApiResult<T>>,
 ) {
   return async (
-    request: Request,
+    reqOrContext: Request | { request: Request; params?: Promise<P> | P },
     route?: RouteContext<P>,
   ): Promise<Response> => {
+    const isContextObj =
+      reqOrContext &&
+      typeof reqOrContext === "object" &&
+      "request" in reqOrContext &&
+      !(reqOrContext instanceof Request);
+    const request = isContextObj
+      ? (reqOrContext as { request: Request }).request
+      : (reqOrContext as Request);
+    const rawParams = isContextObj
+      ? (reqOrContext as { params?: Promise<P> | P }).params
+      : route?.params;
+    const params = (
+      rawParams instanceof Promise ? await rawParams : (rawParams ?? {})
+    ) as P;
+
     const requestId = request.headers.get("x-vercel-id") ?? crypto.randomUUID();
     let response: Response;
+
+    if (request.method === "OPTIONS" && options.access === "public") {
+      return handlePreflight(request);
+    }
 
     try {
       if (options.sameOrigin !== false && !isSafeMethod(request.method)) {
@@ -129,11 +174,10 @@ export function withApi<
         );
       }
 
-      const params = (route ? await route.params : {}) as P;
       let resolved: BaseContext<P> & { actor: Actor | null };
 
       if (options.access === "admin") {
-        const actor = await getCurrentAdmin();
+        const actor = await getCurrentAdmin(request);
         if (!actor) {
           throw new AppError(
             "UNAUTHENTICATED",

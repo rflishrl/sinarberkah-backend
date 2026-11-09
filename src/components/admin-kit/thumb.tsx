@@ -11,7 +11,6 @@ export function Thumb({
   priority?: boolean;
 }) {
   return src ? (
-    // eslint-disable-next-line @next/next/no-img-element -- see comment above
     <img
       src={src}
       alt=""

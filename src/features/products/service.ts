@@ -8,12 +8,12 @@ import {
   updateProduct,
 } from "@/features/products/repository";
 import {
+  type ProductDto,
   productCreateSchema,
   productUpdateSchema,
-  type ProductDto,
 } from "@/features/products/schemas";
 import { notFound } from "@/lib/api/errors";
-import { paginate, type Paginated } from "@/lib/api/types";
+import { type Paginated, paginate } from "@/lib/api/types";
 import type { Actor } from "@/lib/auth/actor";
 import { assertAdmin } from "@/lib/auth/authorize";
 import { isUuid } from "@/lib/ids";
@@ -25,7 +25,8 @@ const LABEL = "Produk";
 const REVALIDATE_TAGS = ["products"];
 
 type Viewer =
-  { audience: "public" } | { audience: "admin"; actor: Actor | null };
+  | { audience: "public" }
+  | { audience: "admin"; actor: Actor | null };
 
 /** Public: active products only, 50/page. Admin: all products, 10/page. */
 export async function listProductsFor(

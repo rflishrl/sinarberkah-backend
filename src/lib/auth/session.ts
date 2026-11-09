@@ -1,7 +1,11 @@
 import "server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { cookies } from "next/headers";
+import {
+  deleteCookie,
+  getCookie,
+  setCookie,
+} from "@tanstack/react-start/server";
 
 import { env } from "@/lib/env";
 import type { AuthenticatedActor } from "./actor";
@@ -70,30 +74,66 @@ export function verifySessionToken(token: string): AuthenticatedActor | null {
   }
 }
 
-export async function getCurrentAdmin(): Promise<AuthenticatedActor | null> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+export function parseSessionTokenFromRequest(
+  request: Request,
+): string | undefined {
+  const cookieHeader = request.headers.get("cookie") || "";
+  const match = cookieHeader.match(
+    new RegExp(`(?:^|;\\s*)${SESSION_COOKIE_NAME}=([^;]*)`),
+  );
+  return match?.[1] ? decodeURIComponent(match[1]) : undefined;
+}
+
+export async function getCurrentAdmin(
+  request?: Request,
+): Promise<AuthenticatedActor | null> {
+  let token: string | undefined;
+  if (request) {
+    token = parseSessionTokenFromRequest(request);
+  } else {
+    try {
+      token = getCookie(SESSION_COOKIE_NAME);
+    } catch {
+      token = undefined;
+    }
+  }
   if (!token) return null;
   return verifySessionToken(token);
+}
+
+export function buildSessionCookieHeader(actor: AuthenticatedActor): string {
+  const token = signSessionToken(actor);
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  return `${SESSION_COOKIE_NAME}=${token}; Path=/; Max-Age=${SESSION_MAX_AGE_SECONDS}; HttpOnly; SameSite=Lax${secure}`;
+}
+
+export function buildClearSessionCookieHeader(): string {
+  return `${SESSION_COOKIE_NAME}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax`;
 }
 
 export async function setAdminSessionCookie(
   actor: AuthenticatedActor,
 ): Promise<void> {
   const token = signSessionToken(actor);
-  const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
-  });
+  try {
+    setCookie(SESSION_COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: SESSION_MAX_AGE_SECONDS,
+    });
+  } catch {
+    // If invoked outside Start request context (e.g., standard API Route Response)
+  }
 }
 
 export async function clearAdminSessionCookie(): Promise<void> {
-  const cookieStore = await cookies();
-  cookieStore.delete(SESSION_COOKIE_NAME);
+  try {
+    deleteCookie(SESSION_COOKIE_NAME);
+  } catch {
+    // If invoked outside Start request context
+  }
 }
 
 export const setSessionCookie = setAdminSessionCookie;

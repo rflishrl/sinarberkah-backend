@@ -49,7 +49,8 @@ export async function consumeRateLimit(
     `;
 
     const row = rows[0] as
-      { count: number; retry_after_seconds: number } | undefined;
+      | { count: number; retry_after_seconds: number }
+      | undefined;
     if (row && row.count > rule.limit) {
       const minutes = Math.max(1, Math.ceil(row.retry_after_seconds / 60));
       throw new AppError(
@@ -74,5 +75,18 @@ export async function resetRateLimit(
     await sql`DELETE FROM rate_limits WHERE key = ${`${rule.name}:${identifier}`}`;
   } catch (error) {
     log("warn", "rate limit reset failed", { error });
+  }
+}
+
+/** Deletes expired rate limit rows to prevent table growth. */
+export async function purgeExpiredRateLimits(): Promise<number> {
+  try {
+    const sql = getDb();
+    const rows =
+      await sql`DELETE FROM rate_limits WHERE reset_at < NOW() RETURNING key`;
+    return rows.length;
+  } catch (error) {
+    log("warn", "purge expired rate limits failed", { error });
+    return 0;
   }
 }

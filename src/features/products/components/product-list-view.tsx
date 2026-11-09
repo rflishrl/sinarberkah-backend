@@ -1,12 +1,10 @@
-"use client";
-
+import { Link } from "@tanstack/react-router";
 import {
   AlertCircleIcon,
   PackageIcon,
   PencilIcon,
   PlusIcon,
 } from "lucide-react";
-import Link from "next/link";
 
 import { DeleteDialog } from "@/components/admin-kit/delete-dialog";
 import { ListSkeleton } from "@/components/admin-kit/list-skeleton";
@@ -54,7 +52,8 @@ function RowActions({ product }: { product: ProductDto }) {
     <div className="flex justify-end gap-1">
       <Button asChild variant="ghost" size="lg" className="h-11 px-3">
         <Link
-          href={`${PRODUCTS_ADMIN_PATH}/${product._id}/edit`}
+          to="/admin/products/$id/edit"
+          params={{ id: product._id }}
           aria-label={`Ubah ${product.name}`}
         >
           <PencilIcon aria-hidden="true" />
@@ -113,7 +112,7 @@ export function ProductListView({ params }: { params: ProductListParams }) {
         {!params.q && (
           <EmptyContent>
             <Button asChild size="lg" className="h-11 px-4">
-              <Link href={`${PRODUCTS_ADMIN_PATH}/new`}>
+              <Link to="/admin/products/new">
                 <PlusIcon aria-hidden="true" />
                 Tambah produk
               </Link>

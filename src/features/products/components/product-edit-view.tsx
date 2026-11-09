@@ -1,5 +1,3 @@
-"use client";
-
 import { AlertCircleIcon } from "lucide-react";
 
 import { ListSkeleton } from "@/components/admin-kit/list-skeleton";

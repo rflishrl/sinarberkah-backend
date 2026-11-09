@@ -1,8 +1,6 @@
-"use client";
-
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Link } from "@tanstack/react-router";
 import { AlertCircleIcon } from "lucide-react";
-import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { Controller, useForm } from "react-hook-form";
 
@@ -21,9 +19,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { GALLERY_CONFIG, type GalleryKind } from "@/features/gallery/config";
 import { useSaveGalleryItem } from "@/features/gallery/hooks";
 import {
-  galleryCreateSchema,
   type GalleryFormValues,
   type GalleryItemDto,
+  galleryCreateSchema,
 } from "@/features/gallery/schemas";
 
 interface GalleryFormProps {
@@ -86,7 +84,11 @@ export function GalleryForm({ kind, item }: GalleryFormProps) {
                   autoComplete="off"
                   required
                   aria-invalid={fieldState.invalid}
-                  aria-describedby="gallery-title-hint gallery-title-error"
+                  aria-describedby={
+                    fieldState.invalid
+                      ? "gallery-title-hint gallery-title-error"
+                      : "gallery-title-hint"
+                  }
                   className="h-11 bg-card"
                 />
                 <FieldDescription id="gallery-title-hint">
@@ -120,7 +122,11 @@ export function GalleryForm({ kind, item }: GalleryFormProps) {
                   autoComplete="off"
                   required
                   aria-invalid={fieldState.invalid}
-                  aria-describedby="gallery-type-hint gallery-type-error"
+                  aria-describedby={
+                    fieldState.invalid
+                      ? "gallery-type-hint gallery-type-error"
+                      : "gallery-type-hint"
+                  }
                   className="h-11 bg-card"
                 />
                 <FieldDescription id="gallery-type-hint">
@@ -148,7 +154,9 @@ export function GalleryForm({ kind, item }: GalleryFormProps) {
                   rows={5}
                   maxLength={1000}
                   aria-invalid={fieldState.invalid}
-                  aria-describedby="gallery-description-error"
+                  aria-describedby={
+                    fieldState.invalid ? "gallery-description-error" : undefined
+                  }
                   className="bg-card"
                 />
                 {fieldState.invalid && (
@@ -182,7 +190,7 @@ export function GalleryForm({ kind, item }: GalleryFormProps) {
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         <Button asChild variant="outline" size="lg" className="h-11 px-4">
-          <Link href={config.adminPath}>Batal</Link>
+          <Link to={config.adminPath}>Batal</Link>
         </Button>
         <Button type="submit" size="lg" className="h-11 px-4" disabled={busy}>
           {busy

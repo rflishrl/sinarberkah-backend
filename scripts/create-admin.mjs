@@ -4,9 +4,9 @@
 // Butuh di .env.local: DATABASE_URI, DATABASE_URL, atau POSTGRES_URL.
 // Pemakaian: npm run create-admin -- admin@sinarberkah.com
 
+import { randomBytes, scryptSync } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { randomBytes, scryptSync } from "node:crypto";
 import { createInterface } from "node:readline";
 import { neon } from "@neondatabase/serverless";
 

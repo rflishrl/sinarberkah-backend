@@ -1,5 +1,3 @@
-import { after } from "next/server";
-
 import { log } from "@/lib/log";
 
 /** Revalidation settings read at runtime from environment variables. */
@@ -76,7 +74,7 @@ export function revalidateFrontend(tags: string[]) {
     return;
   }
 
-  after(async () => {
+  queueMicrotask(async () => {
     const outcome = await sendRevalidate(tags);
     switch (outcome.state) {
       case "ok":

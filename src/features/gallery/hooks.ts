@@ -1,21 +1,19 @@
-"use client";
-
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@tanstack/react-router";
 import { toast } from "sonner";
 
 import { GALLERY_CONFIG, type GalleryKind } from "@/features/gallery/config";
 import {
+  type GalleryListParams,
   galleryDetailOptions,
   galleryKeys,
   galleryListOptions,
-  type GalleryListParams,
 } from "@/features/gallery/queries";
 import type {
   GalleryFormValues,
   GalleryItemDto,
 } from "@/features/gallery/schemas";
-import { api, type ApiClientError } from "@/lib/api/client";
+import { type ApiClientError, api } from "@/lib/api/client";
 
 export function useGalleryList(kind: GalleryKind, params: GalleryListParams) {
   return useQuery(galleryListOptions(kind, params));
@@ -41,7 +39,7 @@ export function useSaveGalleryItem(kind: GalleryKind, id?: string) {
       toast.success(
         id ? "Perubahan berhasil disimpan." : "Berhasil ditambahkan.",
       );
-      router.push(config.adminPath);
+      router.navigate({ to: config.adminPath });
     },
   });
 }

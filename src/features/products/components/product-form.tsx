@@ -1,8 +1,6 @@
-"use client";
-
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Link } from "@tanstack/react-router";
 import { AlertCircleIcon } from "lucide-react";
-import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { Controller, useForm } from "react-hook-form";
 
@@ -23,9 +21,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { useSaveProduct } from "@/features/products/hooks";
 import { PRODUCTS_ADMIN_PATH } from "@/features/products/queries";
 import {
-  productCreateSchema,
   type ProductDto,
   type ProductFormValues,
+  productCreateSchema,
 } from "@/features/products/schemas";
 import { formatRupiah } from "@/lib/utils";
 
@@ -87,7 +85,9 @@ export function ProductForm({ product }: { product?: ProductDto }) {
                   autoComplete="off"
                   required
                   aria-invalid={fieldState.invalid}
-                  aria-describedby="product-name-error"
+                  aria-describedby={
+                    fieldState.invalid ? "product-name-error" : undefined
+                  }
                   className="h-11 bg-card"
                 />
                 {fieldState.invalid && (
@@ -124,7 +124,11 @@ export function ProductForm({ product }: { product?: ProductDto }) {
                     ref={field.ref}
                     required
                     aria-invalid={fieldState.invalid}
-                    aria-describedby="product-price-hint product-price-error"
+                    aria-describedby={
+                      fieldState.invalid
+                        ? "product-price-hint product-price-error"
+                        : "product-price-hint"
+                    }
                     placeholder="Contoh: 150000"
                     className="h-11 bg-card"
                   />
@@ -153,7 +157,11 @@ export function ProductForm({ product }: { product?: ProductDto }) {
                     id="product-category"
                     maxLength={60}
                     aria-invalid={fieldState.invalid}
-                    aria-describedby="product-category-hint product-category-error"
+                    aria-describedby={
+                      fieldState.invalid
+                        ? "product-category-hint product-category-error"
+                        : "product-category-hint"
+                    }
                     className="h-11 bg-card"
                   />
                   <FieldDescription id="product-category-hint">
@@ -182,7 +190,9 @@ export function ProductForm({ product }: { product?: ProductDto }) {
                   rows={5}
                   maxLength={2000}
                   aria-invalid={fieldState.invalid}
-                  aria-describedby="product-description-error"
+                  aria-describedby={
+                    fieldState.invalid ? "product-description-error" : undefined
+                  }
                   className="bg-card"
                 />
                 {fieldState.invalid && (
@@ -242,7 +252,7 @@ export function ProductForm({ product }: { product?: ProductDto }) {
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         <Button asChild variant="outline" size="lg" className="h-11 px-4">
-          <Link href={PRODUCTS_ADMIN_PATH}>Batal</Link>
+          <Link to={PRODUCTS_ADMIN_PATH}>Batal</Link>
         </Button>
         <Button type="submit" size="lg" className="h-11 px-4" disabled={busy}>
           {busy

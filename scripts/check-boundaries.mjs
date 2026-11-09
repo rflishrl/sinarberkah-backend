@@ -27,6 +27,7 @@ const FORBIDDEN_IN_CLIENT = [
   /from\s+["']@\/lib\/db\//,
   /from\s+["']@\/features\/[^"']+\/(service|repository)["']/,
   /from\s+["']@\/lib\/(env|log|auth\/session|api\/with-api|api\/rate-limit)["']/,
+  /from\s+["']@\/server\//,
   /from\s+["']server-only["']/,
 ];
 const EXTERNAL_FETCH = /fetch\(\s*[`"']https?:\/\//;
@@ -49,7 +50,8 @@ for (const file of walk(join(root, "src"))) {
     problems.push(`${rel}: memakai NEXT_PUBLIC_`);
 
   if (
-    /[\\/]app[\\/]api[\\/].*[\\/]route\.ts$/.test(file) &&
+    /[\\/]routes[\\/]api[\\/].*\.ts$/.test(file) &&
+    !/\.test\.ts$/.test(file) &&
     !/withApi(<[^>]*>)?\(/.test(text)
   ) {
     problems.push(`${rel}: route tanpa withApi()`);

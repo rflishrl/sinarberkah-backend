@@ -1,18 +1,15 @@
-"use client";
-
-import * as React from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Link, useRouterState } from "@tanstack/react-router";
 import {
   ExternalLinkIcon,
   Grid3X3Icon,
   ImagesIcon,
   LayoutDashboardIcon,
   LogOutIcon,
+  type LucideIcon,
   MoreVerticalIcon,
   PackageIcon,
-  type LucideIcon,
 } from "lucide-react";
+import * as React from "react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -76,7 +73,7 @@ function getInitials(email: string): string {
 }
 
 function AdminBreadcrumbs() {
-  const pathname = usePathname();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   const getBreadcrumbs = () => {
     if (pathname === "/admin") {
@@ -139,7 +136,7 @@ function AdminBreadcrumbs() {
                   <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
                 ) : (
                   <BreadcrumbLink asChild>
-                    <Link href={crumb.href}>{crumb.label}</Link>
+                    <Link to={crumb.href}>{crumb.label}</Link>
                   </BreadcrumbLink>
                 )}
               </BreadcrumbItem>
@@ -314,7 +311,7 @@ export function AdminShell({
   frontendUrl?: string;
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const siteUrl =
     frontendUrl && frontendUrl !== "http://localhost:3000"
       ? frontendUrl
@@ -331,7 +328,7 @@ export function AdminShell({
                 asChild
                 className="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               >
-                <Link href="/admin">
+                <Link to="/admin">
                   <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand font-heading text-sm font-extrabold text-ink shadow-xs">
                     SB
                   </div>
@@ -368,7 +365,7 @@ export function AdminShell({
                             : "text-sidebar-foreground/80 hover:text-sidebar-foreground"
                         }
                       >
-                        <Link href={href}>
+                        <Link to={href}>
                           <Icon className="size-4" aria-hidden="true" />
                           <span>{label}</span>
                         </Link>

@@ -1,12 +1,10 @@
-"use client";
-
+import { Link } from "@tanstack/react-router";
 import {
   AlertCircleIcon,
   ImagesIcon,
   PencilIcon,
   PlusIcon,
 } from "lucide-react";
-import Link from "next/link";
 
 import { DeleteDialog } from "@/components/admin-kit/delete-dialog";
 import { ListSkeleton } from "@/components/admin-kit/list-skeleton";
@@ -38,10 +36,22 @@ import type { GalleryListParams } from "@/features/gallery/queries";
 import type { GalleryItemDto } from "@/features/gallery/schemas";
 import { formatDate } from "@/lib/utils";
 
-function EditLink({ href, name }: { href: string; name: string }) {
+function EditLink({
+  kind,
+  id,
+  name,
+}: {
+  kind: GalleryKind;
+  id: string;
+  name: string;
+}) {
+  const to =
+    kind === "portfolio"
+      ? ("/admin/portfolio/$id/edit" as const)
+      : ("/admin/patterns/$id/edit" as const);
   return (
     <Button asChild variant="ghost" size="lg" className="h-11 px-3">
-      <Link href={href} aria-label={`Ubah ${name}`}>
+      <Link to={to} params={{ id }} aria-label={`Ubah ${name}`}>
         <PencilIcon aria-hidden="true" />
         <span className="hidden sm:inline">Ubah</span>
       </Link>
@@ -59,10 +69,7 @@ function RowActions({
   const remove = useDeleteGalleryItem(kind);
   return (
     <div className="flex justify-end gap-1">
-      <EditLink
-        href={`${GALLERY_CONFIG[kind].adminPath}/${item._id}/edit`}
-        name={item.title}
-      />
+      <EditLink kind={kind} id={item._id} name={item.title} />
       <DeleteDialog
         itemName={item.title}
         onConfirm={() => remove.mutateAsync(item._id)}
@@ -124,7 +131,13 @@ export function GalleryListView({
         {!params.q && (
           <EmptyContent>
             <Button asChild size="lg" className="h-11 px-4">
-              <Link href={`${config.adminPath}/new`}>
+              <Link
+                to={
+                  kind === "portfolio"
+                    ? "/admin/portfolio/new"
+                    : "/admin/patterns/new"
+                }
+              >
                 <PlusIcon aria-hidden="true" />
                 Tambah {config.singular}
               </Link>

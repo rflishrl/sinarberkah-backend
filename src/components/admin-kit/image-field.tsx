@@ -113,7 +113,6 @@ export function ImageField({
             Lepaskan file foto di sini
           </div>
         ) : value ? (
-          // eslint-disable-next-line @next/next/no-img-element -- arbitrary URL preview
           <img
             src={value}
             alt="Pratinjau foto"

@@ -8,8 +8,9 @@ const admin = {
 };
 const user = { id: "u1", email: "user@sinarberkah.com", role: "user" as const };
 
-const { checkRevalidate, getRevalidateStatus } =
-  await import("@/features/revalidate/service");
+const { checkRevalidate, getRevalidateStatus } = await import(
+  "@/features/revalidate/service"
+);
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status });

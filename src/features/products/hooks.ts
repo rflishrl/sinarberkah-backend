@@ -1,22 +1,20 @@
-"use client";
-
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@tanstack/react-router";
 import { toast } from "sonner";
 
 import {
   PRODUCTS_ADMIN_API,
   PRODUCTS_ADMIN_PATH,
+  type ProductListParams,
   productDetailOptions,
   productKeys,
   productListOptions,
-  type ProductListParams,
 } from "@/features/products/queries";
 import type {
   ProductDto,
   ProductFormValues,
 } from "@/features/products/schemas";
-import { api, type ApiClientError } from "@/lib/api/client";
+import { type ApiClientError, api } from "@/lib/api/client";
 
 export function useProductList(params: ProductListParams) {
   return useQuery(productListOptions(params));
@@ -39,7 +37,7 @@ export function useSaveProduct(id?: string) {
       toast.success(
         id ? "Perubahan berhasil disimpan." : "Berhasil ditambahkan.",
       );
-      router.push(PRODUCTS_ADMIN_PATH);
+      router.navigate({ to: PRODUCTS_ADMIN_PATH });
     },
   });
 }
