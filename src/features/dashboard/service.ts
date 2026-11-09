@@ -1,4 +1,4 @@
-import "server-only";
+import "@/lib/server-only";
 
 import { countGalleryItems } from "@/features/gallery/repository";
 import { countProducts } from "@/features/products/repository";

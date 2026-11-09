@@ -29,6 +29,7 @@ const FORBIDDEN_IN_CLIENT = [
   /from\s+["']@\/lib\/(env|log|auth\/session|api\/with-api|api\/rate-limit)["']/,
   /from\s+["']@\/server\//,
   /from\s+["']server-only["']/,
+  /["']@\/lib\/server-only["']/,
 ];
 const EXTERNAL_FETCH = /fetch\(\s*[`"']https?:\/\//;
 

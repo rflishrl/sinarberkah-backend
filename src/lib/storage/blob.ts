@@ -1,4 +1,4 @@
-import "server-only";
+import "@/lib/server-only";
 
 import { del, list, put } from "@vercel/blob";
 

@@ -1,4 +1,4 @@
-import "server-only";
+import "@/lib/server-only";
 
 import type { GalleryKind } from "@/features/gallery/config";
 import type {

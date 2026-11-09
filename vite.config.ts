@@ -13,6 +13,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fromRoot("./src"),
+      "server-only": fromRoot("./src/lib/server-only.ts"),
     },
   },
   plugins: [

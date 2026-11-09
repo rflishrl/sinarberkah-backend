@@ -1,4 +1,4 @@
-import "server-only";
+import "@/lib/server-only";
 
 import { pingDatabase } from "@/features/health/repository";
 import { AppError } from "@/lib/api/errors";

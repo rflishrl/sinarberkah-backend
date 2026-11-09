@@ -1,4 +1,4 @@
-import "server-only";
+import "@/lib/server-only";
 
 import { type Paginated, paginate } from "@/lib/api/types";
 

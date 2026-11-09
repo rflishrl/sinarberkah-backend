@@ -1,4 +1,4 @@
-import "server-only";
+import "@/lib/server-only";
 
 import { listReferencedImageUrls } from "@/features/uploads/repository";
 import { AppError } from "@/lib/api/errors";

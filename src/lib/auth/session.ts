@@ -1,4 +1,4 @@
-import "server-only";
+import "@/lib/server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 import {

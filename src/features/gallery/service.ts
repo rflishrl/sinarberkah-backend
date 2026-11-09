@@ -1,4 +1,4 @@
-import "server-only";
+import "@/lib/server-only";
 
 import {
   ADMIN_PAGE_SIZE,
