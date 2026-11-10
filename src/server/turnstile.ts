@@ -22,15 +22,25 @@ export interface TurnstileVerifyResult {
 const CLOUDFLARE_SITEVERIFY_URL =
   "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 const TIMEOUT_MS = 5000;
+const DUMMY_SECRET_KEY = "1x0000000000000000000000000000000AA";
 
-function getAllowedHostnames(): Set<string> {
+function getAllowedHostnames(secretKey: string): Set<string> {
   const raw = process.env.TURNSTILE_ALLOWED_HOSTNAMES ?? "";
-  return new Set(
-    raw
-      .split(",")
-      .map((h) => h.trim().toLowerCase())
-      .filter(Boolean),
-  );
+  const hostnames = raw
+    .split(",")
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (hostnames.length === 0) {
+    return new Set();
+  }
+
+  // Testing dummy key resmi Cloudflare selalu mengembalikan hostname 'example.com'
+  if (secretKey === DUMMY_SECRET_KEY && !hostnames.includes("example.com")) {
+    hostnames.push("example.com");
+  }
+
+  return new Set(hostnames);
 }
 
 /**
@@ -56,7 +66,7 @@ export async function verifyTurnstile(
     return { success: false, reason: "missing_secret_key" };
   }
 
-  const allowedHostnames = getAllowedHostnames();
+  const allowedHostnames = getAllowedHostnames(secretKey);
   if (allowedHostnames.size === 0) {
     log(
       "error",
