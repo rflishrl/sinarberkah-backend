@@ -2,10 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { uploadPhoto } from "@/features/uploads/service";
 import { AppError } from "@/lib/api/errors";
+import { RATE_LIMITS } from "@/lib/api/rate-limits";
 import { withApi } from "@/lib/api/with-api";
 
 const handlePost = withApi(
-  { access: "admin" },
+  { access: "admin", rateLimit: RATE_LIMITS.upload },
   async ({ request, actor, requestId }) => {
     const form = await request.formData().catch(() => {
       throw new AppError("BAD_REQUEST", "Body must be multipart/form-data.");

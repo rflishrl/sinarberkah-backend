@@ -2,6 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   ExternalLinkIcon,
   Grid3X3Icon,
+  HardDriveIcon,
   ImagesIcon,
   LayoutDashboardIcon,
   LogOutIcon,
@@ -59,6 +60,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Produk", href: "/admin/products", icon: PackageIcon },
   { label: "Portofolio", href: "/admin/portfolio", icon: ImagesIcon },
   { label: "Galeri Pola", href: "/admin/patterns", icon: Grid3X3Icon },
+  { label: "Penyimpanan", href: "/admin/storage", icon: HardDriveIcon },
 ];
 
 function isNavActive(pathname: string, href: string) {
@@ -117,6 +119,8 @@ function AdminBreadcrumbs() {
       } else if (pathname.endsWith("/edit")) {
         crumbs.push({ label: "Ubah Pola", isCurrent: true });
       }
+    } else if (pathname.startsWith("/admin/storage")) {
+      crumbs.push({ label: "Penyimpanan", isCurrent: true });
     }
 
     return crumbs;

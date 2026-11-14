@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { AppError } from "@/lib/api/errors";
 import { resetServerEnvCache } from "@/lib/env";
 import { readBody, sameOriginRequest } from "../../../test/api";
 
@@ -9,6 +10,7 @@ const TINY_PNG = Buffer.from(
 );
 
 const getCurrentAdmin = vi.fn();
+const consumeRateLimit = vi.fn();
 const uploadBlobImage = vi.fn();
 const putObject = vi.fn();
 const deleteObjects = vi.fn();
@@ -18,6 +20,15 @@ const getMediaUsageSummary = vi.fn();
 vi.mock("@/lib/auth/session", () => ({
   getCurrentAdmin: (...args: unknown[]) => getCurrentAdmin(...args),
 }));
+vi.mock("@/lib/api/rate-limit", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/api/rate-limit")>(
+    "@/lib/api/rate-limit",
+  );
+  return {
+    ...actual,
+    consumeRateLimit: (...args: unknown[]) => consumeRateLimit(...args),
+  };
+});
 vi.mock("@/lib/storage/blob", () => ({
   UPLOAD_PREFIX: "sinarberkah/",
   uploadImage: (...args: unknown[]) => uploadBlobImage(...args),
@@ -88,6 +99,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   resetServerEnvCache();
   getCurrentAdmin.mockResolvedValue(ADMIN);
+  consumeRateLimit.mockResolvedValue(undefined);
   getMediaUsageSummary.mockResolvedValue({
     totalBytes: 0,
     totalThumbBytes: 0,
@@ -249,5 +261,17 @@ describe("POST /api/upload", () => {
       sameOriginRequest("/api/upload", { method: "POST", json: { x: 1 } }),
     );
     expect(bad.status).toBe(400);
+  });
+
+  it("menerapkan rate limit pada endpoint upload (429)", async () => {
+    consumeRateLimit.mockRejectedValueOnce(
+      new AppError("RATE_LIMITED", "Terlalu banyak permintaan unggahan.", {
+        retryAfterSeconds: 60,
+      }),
+    );
+    const file = new File([TINY_PNG], "ok.png", { type: "image/png" });
+    const limited = await POST(makeUploadRequest("products", file));
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get("retry-after")).toBe("60");
   });
 });

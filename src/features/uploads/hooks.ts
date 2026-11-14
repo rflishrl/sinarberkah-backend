@@ -1,7 +1,11 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
+import {
+  type MediaStorageParams,
+  mediaStorageOptions,
+} from "@/features/uploads/queries";
 import type { UploadFolder, UploadResult } from "@/features/uploads/schemas";
 import { type ApiClientError, api } from "@/lib/api/client";
 
@@ -27,4 +31,8 @@ export function useUploadPhoto(folder: UploadFolder) {
       });
     },
   });
+}
+
+export function useMediaStorageSummary(params: MediaStorageParams) {
+  return useQuery(mediaStorageOptions(params));
 }
