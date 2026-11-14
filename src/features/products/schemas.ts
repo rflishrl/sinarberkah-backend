@@ -46,7 +46,7 @@ export interface ProductDto {
   description: string;
   /** Rupiah, bilangan bulat. */
   price: number;
-  image: { image_url: string };
+  image: { image_url: string; thumb_url?: string };
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

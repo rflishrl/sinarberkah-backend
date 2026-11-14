@@ -29,7 +29,7 @@ export interface GalleryItemDto {
   title: string;
   type: string;
   description: string;
-  image: { image_url: string };
+  image: { image_url: string; thumb_url?: string };
   createdAt: string;
   updatedAt: string;
 }

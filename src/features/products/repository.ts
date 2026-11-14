@@ -6,6 +6,7 @@ import type {
   ProductUpdateInput,
 } from "@/features/products/schemas";
 import { getDb } from "@/lib/db/client";
+import { getPublicMediaUrl, getPublicThumbUrl } from "@/lib/storage/media-url";
 
 interface RawProductRow {
   id: string;
@@ -19,15 +20,19 @@ interface RawProductRow {
   updated_at: string | Date;
 }
 
-/** Preserves legacy column names for backwards compatibility. */
+/** Preserves legacy column names for backwards compatibility while adding thumb_url. */
 function toDto(row: RawProductRow): ProductDto {
+  const thumbUrl = getPublicThumbUrl(row.image_url);
   return {
     _id: row.id,
     name: row.name,
     category: row.category,
     description: row.description,
     price: Number(row.price),
-    image: { image_url: row.image_url },
+    image: {
+      image_url: getPublicMediaUrl(row.image_url),
+      ...(thumbUrl ? { thumb_url: thumbUrl } : {}),
+    },
     isActive: row.is_active,
     createdAt: new Date(row.created_at).toISOString(),
     updatedAt: new Date(row.updated_at).toISOString(),
@@ -119,7 +124,11 @@ export async function insertProduct(
 export async function updateProduct(
   id: string,
   input: ProductUpdateInput,
-): Promise<{ item: ProductDto; previousImageUrl: string } | null> {
+): Promise<{
+  item: ProductDto;
+  previousImageUrl: string;
+  currentImageUrl: string;
+} | null> {
   const sql = getDb();
 
   const existing =
@@ -142,7 +151,12 @@ export async function updateProduct(
   `;
 
   if (rows.length === 0) return null;
-  return { item: toDto(rows[0] as unknown as RawProductRow), previousImageUrl };
+  const row = rows[0] as unknown as RawProductRow;
+  return {
+    item: toDto(row),
+    previousImageUrl,
+    currentImageUrl: row.image_url,
+  };
 }
 
 export async function deleteProduct(id: string): Promise<ProductDto | null> {
