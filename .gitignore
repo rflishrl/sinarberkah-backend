@@ -23,5 +23,8 @@ npm-debug.log*
 .env
 .env*.local
 
+# local media backups and migration state (jangan pernah di-commit)
+.backups/
+
 # vercel
 .vercel

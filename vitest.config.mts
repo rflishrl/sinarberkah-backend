@@ -15,7 +15,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "scripts/**/*.test.ts"],
     // Fake env values for tests only, so getServerEnv() never reads .env.local.
     env: {
       DATABASE_URI: "postgresql://postgres:password@localhost:5432/testdb",

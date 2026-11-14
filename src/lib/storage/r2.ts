@@ -29,13 +29,25 @@ export interface R2ClientConfig {
 
 type FetchFn = typeof fetch;
 
-function buildObjectUrl(endpoint: string, bucket: string, key: string): string {
+function buildBucketBaseUrl(endpoint: string, bucket: string): string {
   const cleanEndpoint = endpoint.replace(/\/+$/, "");
+  const encodedBucket = encodeURIComponent(bucket);
+  const trailingRaw = `/${bucket}`;
+  const trailingEncoded = `/${encodedBucket}`;
+  const baseEndpoint = cleanEndpoint.endsWith(trailingEncoded)
+    ? cleanEndpoint.slice(0, -trailingEncoded.length)
+    : cleanEndpoint.endsWith(trailingRaw)
+      ? cleanEndpoint.slice(0, -trailingRaw.length)
+      : cleanEndpoint;
+  return `${baseEndpoint}/${encodedBucket}`;
+}
+
+function buildObjectUrl(endpoint: string, bucket: string, key: string): string {
   const encodedKey = key
     .split("/")
     .map((segment) => encodeURIComponent(segment))
     .join("/");
-  return `${cleanEndpoint}/${encodeURIComponent(bucket)}/${encodedKey}`;
+  return `${buildBucketBaseUrl(endpoint, bucket)}/${encodedKey}`;
 }
 
 function byteLengthOf(body: PutObjectInput["body"]): number {
@@ -266,7 +278,7 @@ export function createR2Provider(
       input: ListObjectsInput = {},
     ): Promise<ListObjectsResult> {
       const url = new URL(
-        `${config.endpoint.replace(/\/+$/, "")}/${encodeURIComponent(config.bucketName)}`,
+        buildBucketBaseUrl(config.endpoint, config.bucketName),
       );
       url.searchParams.set("list-type", "2");
       if (input.prefix) url.searchParams.set("prefix", input.prefix);
