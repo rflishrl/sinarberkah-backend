@@ -27,6 +27,7 @@ import { Route as ApiCronCleanupBlobsRouteImport } from './routes/api/cron/clean
 import { Route as AdminPatternsIdEditRouteImport } from './routes/admin/patterns/$id.edit'
 import { Route as AdminPortfolioIdEditRouteImport } from './routes/admin/portfolio/$id.edit'
 import { Route as AdminProductsIdEditRouteImport } from './routes/admin/products/$id.edit'
+import { Route as ApiAdminDiagnosticsImageRouteImport } from './routes/api/admin/diagnostics/image'
 import { Route as ApiAdminPatternsIndexRouteImport } from './routes/api/admin/patterns/index'
 import { Route as ApiAdminPatternsIdRouteImport } from './routes/api/admin/patterns/$id'
 import { Route as ApiAdminPortfolioIndexRouteImport } from './routes/api/admin/portfolio/index'
@@ -132,6 +133,12 @@ const AdminProductsIdEditRoute = AdminProductsIdEditRouteImport.update({
   path: '/products/$id/edit',
   getParentRoute: () => AdminRoute,
 } as any)
+const ApiAdminDiagnosticsImageRoute =
+  ApiAdminDiagnosticsImageRouteImport.update({
+    id: '/api/admin/diagnostics/image',
+    path: '/api/admin/diagnostics/image',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAdminPatternsIndexRoute = ApiAdminPatternsIndexRouteImport.update({
   id: '/api/admin/patterns/',
   path: '/api/admin/patterns/',
@@ -223,6 +230,7 @@ export interface FileRoutesByFullPath {
   '/admin/patterns/$id/edit': typeof AdminPatternsIdEditRoute
   '/admin/portfolio/$id/edit': typeof AdminPortfolioIdEditRoute
   '/admin/products/$id/edit': typeof AdminProductsIdEditRoute
+  '/api/admin/diagnostics/image': typeof ApiAdminDiagnosticsImageRoute
   '/api/admin/patterns/$id': typeof ApiAdminPatternsIdRoute
   '/api/admin/portfolio/$id': typeof ApiAdminPortfolioIdRoute
   '/api/admin/products/$id': typeof ApiAdminProductsIdRoute
@@ -256,6 +264,7 @@ export interface FileRoutesByTo {
   '/admin/patterns/$id/edit': typeof AdminPatternsIdEditRoute
   '/admin/portfolio/$id/edit': typeof AdminPortfolioIdEditRoute
   '/admin/products/$id/edit': typeof AdminProductsIdEditRoute
+  '/api/admin/diagnostics/image': typeof ApiAdminDiagnosticsImageRoute
   '/api/admin/patterns/$id': typeof ApiAdminPatternsIdRoute
   '/api/admin/portfolio/$id': typeof ApiAdminPortfolioIdRoute
   '/api/admin/products/$id': typeof ApiAdminProductsIdRoute
@@ -291,6 +300,7 @@ export interface FileRoutesById {
   '/admin/patterns/$id/edit': typeof AdminPatternsIdEditRoute
   '/admin/portfolio/$id/edit': typeof AdminPortfolioIdEditRoute
   '/admin/products/$id/edit': typeof AdminProductsIdEditRoute
+  '/api/admin/diagnostics/image': typeof ApiAdminDiagnosticsImageRoute
   '/api/admin/patterns/$id': typeof ApiAdminPatternsIdRoute
   '/api/admin/portfolio/$id': typeof ApiAdminPortfolioIdRoute
   '/api/admin/products/$id': typeof ApiAdminProductsIdRoute
@@ -327,6 +337,7 @@ export interface FileRouteTypes {
     | '/admin/patterns/$id/edit'
     | '/admin/portfolio/$id/edit'
     | '/admin/products/$id/edit'
+    | '/api/admin/diagnostics/image'
     | '/api/admin/patterns/$id'
     | '/api/admin/portfolio/$id'
     | '/api/admin/products/$id'
@@ -360,6 +371,7 @@ export interface FileRouteTypes {
     | '/admin/patterns/$id/edit'
     | '/admin/portfolio/$id/edit'
     | '/admin/products/$id/edit'
+    | '/api/admin/diagnostics/image'
     | '/api/admin/patterns/$id'
     | '/api/admin/portfolio/$id'
     | '/api/admin/products/$id'
@@ -394,6 +406,7 @@ export interface FileRouteTypes {
     | '/admin/patterns/$id/edit'
     | '/admin/portfolio/$id/edit'
     | '/admin/products/$id/edit'
+    | '/api/admin/diagnostics/image'
     | '/api/admin/patterns/$id'
     | '/api/admin/portfolio/$id'
     | '/api/admin/products/$id'
@@ -419,6 +432,7 @@ export interface RootRouteChildren {
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiCronCleanupBlobsRoute: typeof ApiCronCleanupBlobsRoute
+  ApiAdminDiagnosticsImageRoute: typeof ApiAdminDiagnosticsImageRoute
   ApiAdminPatternsIdRoute: typeof ApiAdminPatternsIdRoute
   ApiAdminPortfolioIdRoute: typeof ApiAdminPortfolioIdRoute
   ApiAdminProductsIdRoute: typeof ApiAdminProductsIdRoute
@@ -563,6 +577,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminProductsIdEditRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/api/admin/diagnostics/image': {
+      id: '/api/admin/diagnostics/image'
+      path: '/api/admin/diagnostics/image'
+      fullPath: '/api/admin/diagnostics/image'
+      preLoaderRoute: typeof ApiAdminDiagnosticsImageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/patterns/': {
       id: '/api/admin/patterns/'
       path: '/api/admin/patterns'
@@ -701,6 +722,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthLoginRoute: ApiAuthLoginRoute,
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiCronCleanupBlobsRoute: ApiCronCleanupBlobsRoute,
+  ApiAdminDiagnosticsImageRoute: ApiAdminDiagnosticsImageRoute,
   ApiAdminPatternsIdRoute: ApiAdminPatternsIdRoute,
   ApiAdminPortfolioIdRoute: ApiAdminPortfolioIdRoute,
   ApiAdminProductsIdRoute: ApiAdminProductsIdRoute,

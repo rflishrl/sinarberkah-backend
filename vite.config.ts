@@ -27,6 +27,11 @@ export default defineConfig({
     viteReact(),
     nitro({
       preset: "vercel",
+      vercel: {
+        functions: {
+          runtime: "bun1.x",
+        },
+      },
     }),
   ],
 });
