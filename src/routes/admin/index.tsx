@@ -30,7 +30,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getDashboardServerFn } from "@/features/dashboard/server-fns";
-import { RevalidateCard } from "@/features/revalidate/components/revalidate-card";
 
 export const Route = createFileRoute("/admin/")({
   head: () => ({
@@ -157,7 +156,7 @@ function StatCard({
 }
 
 function DashboardPage() {
-  const { counts, revalidateStatus, blobReady } = Route.useLoaderData();
+  const { counts, blobReady } = Route.useLoaderData();
 
   return (
     <div className="space-y-8">
@@ -265,27 +264,6 @@ function DashboardPage() {
                 </Link>
               </Button>
             </div>
-          </CardContent>
-        </Card>
-      </section>
-
-      {/* Sinkronisasi Cache Website Publik */}
-      <section aria-labelledby="revalidate-heading">
-        <Card>
-          <CardHeader>
-            <CardTitle
-              id="revalidate-heading"
-              className="text-base font-semibold"
-            >
-              Sinkronisasi Cache Website Publik
-            </CardTitle>
-            <CardDescription>
-              Status webhook untuk menyegarkan cache frontend secara otomatis
-              setiap kali data disimpan atau dihapus.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <RevalidateCard status={revalidateStatus} />
           </CardContent>
         </Card>
       </section>
