@@ -6,24 +6,90 @@ Built with TanStack Start, TanStack Router, Vite, Nitro (preset: Vercel), React 
 
 ## System Architecture
 
+```mermaid
+flowchart LR
+    Visitor["Public Visitor / Browser"] --> Frontend["Frontend (sinarberkah-plato)"]
+    Admin["Administrator / Browser"] --> AdminUI["Admin Panel (/login, /admin/**)"]
+
+    Frontend -- "REST API (GET)" --> PublicAPI["Public API (/api/products/v1, /api/gallery/v1)"]
+    AdminUI -- "Server Fns & /api/admin/**, /api/upload" --> Backend["TanStack Start + Nitro (Bun Runtime)"]
+    PublicAPI --> Backend
+
+    AdminUI -- "Turnstile Widget" --> Turnstile["Cloudflare Turnstile"]
+    Backend -- "Siteverify" --> Turnstile
+
+    Backend -- "Parameterized SQL" --> Neon[("Neon PostgreSQL")]
+    Backend -- "aws4fetch + Bun.Image WebP" --> R2[("Cloudflare R2 (sinar-berkah)")]
+    R2 -- "CDN Custom Domain" --> Visitor
+    R2 -- "CDN Custom Domain" --> AdminUI
+
+    Backend -- "POST /api/revalidate" --> Frontend
+    Cron["Vercel Cron (Daily)"] -- "GET /api/cron/cleanup-media" --> Backend
 ```
-Browser -> Frontend (sinarberkah-plato) -> Backend API -> Neon PostgreSQL
-                                                 Photos: Cloudflare R2
-                                                 Bot Protection: Cloudflare Turnstile
+
+## Project Structure
+
+```text
+src/
+├── routes/
+│   ├── __root.tsx                  # Global HTML shell, providers, and theme initialization
+│   ├── index.tsx                   # Root redirect to /admin dashboard
+│   ├── login.tsx                   # Admin login page with Cloudflare Turnstile
+│   ├── admin.tsx                   # Authenticated admin layout (AdminShell sidebar)
+│   ├── admin/
+│   │   ├── index.tsx               # Dashboard metrics & storage readiness alert
+│   │   ├── storage.tsx             # R2 media quota monitor and asset table
+│   │   ├── products/               # Product CRUD pages (list, new, edit)
+│   │   ├── portfolio/              # Portfolio CRUD pages (list, new, edit)
+│   │   └── patterns/               # Pattern gallery CRUD pages (list, new, edit)
+│   └── api/
+│       ├── products/v1/            # Public read-only product API endpoints
+│       ├── gallery/v1/             # Public patterns and portfolio API endpoints
+│       ├── article/v1/             # Public articles endpoint (placeholder)
+│       ├── admin/                  # Protected admin CRUD, storage, diagnostics, revalidate test
+│       ├── auth/                   # Login (Turnstile + rate limit) and logout handlers
+│       ├── cron/
+│       │   └── cleanup-media.ts    # Daily cleanup for orphaned R2 media and rate limits
+│       ├── upload.ts               # Admin multipart image upload -> R2 WebP (full + thumb)
+│       └── health.ts               # Service & Neon database connectivity health check
+├── features/
+│   ├── articles/                   # Articles placeholder service
+│   ├── auth/                       # Login UI, session service, schemas, server functions
+│   ├── dashboard/                  # Dashboard metrics aggregation & server functions
+│   ├── gallery/                    # Portfolio & pattern views, services, queries, repositories
+│   ├── health/                     # Health check service and database ping repository
+│   ├── products/                   # Product views, services, queries, repositories
+│   ├── revalidate/                 # Frontend cache revalidation webhook dispatcher & test UI
+│   └── uploads/                    # Bun.Image WebP pipeline, R2 quota dashboard, cleanup service
+├── components/
+│   ├── admin-kit/                  # Admin shell, tables, pagination, search, image field, dialogs
+│   ├── providers/                  # TanStack Query & next-themes providers
+│   ├── ui/                         # Reusable shadcn/ui primitives
+│   └── turnstile-field.tsx         # Cloudflare Turnstile widget wrapper
+├── hooks/
+│   └── use-mobile.ts               # Responsive viewport hook for admin navigation
+├── lib/
+│   ├── api/                        # withApi() handler wrapper, errors, CSRF & IP rate limiter
+│   ├── auth/                       # scrypt password hashing, HMAC-SHA256 session cookies
+│   ├── db/                         # Neon serverless PostgreSQL client
+│   ├── image/                      # Client-side image pre-shrink helper prior to upload
+│   ├── query/                      # TanStack Query client factory
+│   ├── schemas/                    # Shared Zod validation & pagination schemas
+│   ├── storage/                    # Cloudflare R2 S3 client (aws4fetch) & media URL helpers
+│   ├── env.ts                      # Validated server environment configuration
+│   ├── log.ts                      # Structured JSON server logger
+│   └── revalidate.ts               # On-demand frontend cache revalidation helper
+├── server/
+│   └── turnstile.ts                # Server-only Cloudflare Turnstile verification helper
+├── styles/
+│   └── globals.css                 # Tailwind CSS 4 entry and theme design tokens
+├── types/
+│   └── bun-image.d.ts              # Type definitions for Bun.Image runtime API
+├── router.tsx                      # TanStack Router setup with QueryClient context
+└── routeTree.gen.ts                # Auto-generated TanStack Router route tree
 ```
 
-The codebase follows a strict layered pattern:
-
-- **Route definitions** (`src/routes/`):
-  - Page routes: `src/routes/login.tsx`, `src/routes/admin.tsx`, `src/routes/admin/**`
-  - API routes: `src/routes/api/**` wrapped with `withApi()`
-  - Server functions: `src/features/**/server-fns.ts` powered by `createServerFn`
-- **Services** (`src/features/**/service.ts`): Business logic, validation rules, and authorization verification.
-- **Repositories** (`src/features/**/repository.ts`): The only layer permitted to query Neon PostgreSQL.
-- **Server Utilities** (`src/server/`): Server-only helpers such as `src/server/turnstile.ts` (enforced via `server-only`).
-- **UI Components** (`src/components/`): Reusable UI primitives including `<TurnstileField />` (`src/components/turnstile-field.tsx`).
-
-Layer boundaries are enforced by `bun run check:boundaries`. Client-side components cannot import server-only modules or make direct database queries.
+The codebase follows a strict layered pattern enforced by `bun run check:boundaries`. Client-side components cannot import server-only modules (`src/server/**`) or make direct database queries (`src/features/**/repository.ts`).
 
 ## Getting Started
 
