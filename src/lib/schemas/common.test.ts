@@ -10,8 +10,8 @@ import {
 } from "@/features/products/schemas";
 import { listQuerySchema } from "@/lib/schemas/common";
 
-const BLOB_URL =
-  "https://abc123.public.blob.vercel-storage.com/sinarberkah/products/photo-x.jpg";
+const R2_KEY = "550e8400-e29b-41d4-a716-446655440000.webp";
+const R2_URL = `https://media-sb.raflisahrul.my.id/${R2_KEY}`;
 
 describe("productCreateSchema", () => {
   it("mengisi nilai bawaan untuk kolom opsional", () => {
@@ -27,21 +27,25 @@ describe("productCreateSchema", () => {
     });
   });
 
-  it("menerima foto dari Vercel Blob", () => {
+  it("menerima key atau URL WebP dari R2", () => {
     const result = productCreateSchema.parse({
       name: "Pagar",
       price: 1,
-      image_url: BLOB_URL,
+      image_url: R2_URL,
     });
-    expect(result.image_url).toBe(BLOB_URL);
+    expect(result.image_url).toBe(R2_URL);
+    expect(
+      productCreateSchema.parse({ name: "Pagar", price: 1, image_url: R2_KEY })
+        .image_url,
+    ).toBe(R2_KEY);
   });
 
   it.each([
     "https://example.com/foto.jpg",
-    "http://abc123.public.blob.vercel-storage.com/foto.jpg",
-    "https://public.blob.vercel-storage.com.evil.com/foto.jpg",
+    "http://media-sb.raflisahrul.my.id/foto.webp",
+    "https://media-sb.raflisahrul.my.id/foto.png",
     "javascript:alert(1)",
-  ])("menolak foto di luar Vercel Blob: %s", (image_url) => {
+  ])("menolak foto di luar key/URL R2 yang valid: %s", (image_url) => {
     expect(
       productCreateSchema.safeParse({ name: "Pagar", price: 1, image_url })
         .success,
@@ -76,7 +80,7 @@ describe("galleryCreateSchema", () => {
     const result = galleryCreateSchema.parse({
       title: "  Pola LC 071 ",
       type: "LC 071",
-      image_url: BLOB_URL,
+      image_url: R2_URL,
     });
     expect(result.title).toBe("Pola LC 071");
     expect(result.description).toBe("");

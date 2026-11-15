@@ -3,10 +3,8 @@ import "@/lib/server-only";
 import { AppError } from "@/lib/api/errors";
 import { ConfigError, isNonProductionMediaEnv } from "@/lib/env";
 import {
-  BLOB_HOSTNAME,
   extractCanonicalKeyFromHttpsUrl,
   isAcceptedMediaInput,
-  isLegacyBlobUrl,
   isLegacyMediaUrl,
   isValidMediaKey,
   isValidObjectKey,
@@ -15,10 +13,8 @@ import {
 export const IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
 export {
-  BLOB_HOSTNAME,
   extractCanonicalKeyFromHttpsUrl,
   isAcceptedMediaInput,
-  isLegacyBlobUrl,
   isLegacyMediaUrl,
   isValidMediaKey,
   isValidObjectKey,
@@ -99,15 +95,14 @@ export function getPublicThumbUrl(
 
 /**
  * Normalizes an incoming media reference (`url` or canonical key) for DB persistence.
- * Strips the configured `R2_PUBLIC_DOMAIN` prefix into a canonical UUID WebP key while
- * keeping legacy Vercel Blob URLs intact during transition.
+ * Strips the configured `R2_PUBLIC_DOMAIN` prefix into a canonical UUID WebP key.
  */
 export function normalizeMediaInputForStorage(
   value: string,
   explicitDomain?: string,
 ): string {
   if (!value) return "";
-  if (isLegacyBlobUrl(value) || isValidMediaKey(value)) return value;
+  if (isValidMediaKey(value)) return value;
 
   const extracted = extractCanonicalKeyFromHttpsUrl(value);
   if (!extracted) {

@@ -8,23 +8,18 @@ export class ConfigError extends Error {
   }
 }
 
-const optionalTrimmedString = z.preprocess(
-  (value) =>
-    typeof value === "string" && value.trim() === "" ? undefined : value,
-  z.string().trim().min(1).optional(),
-);
+const requiredTrimmedString = z
+  .string({ error: "is required" })
+  .trim()
+  .min(1, "is required");
 
-const optionalHttpsUrl = z.preprocess(
-  (value) =>
-    typeof value === "string" && value.trim() === "" ? undefined : value,
-  z
-    .string()
-    .trim()
-    .url("must be a valid URL")
-    .refine((value) => value.startsWith("https://"), "must use https:// scheme")
-    .transform((value) => value.replace(/\/+$/, ""))
-    .optional(),
-);
+const requiredHttpsUrl = z
+  .string({ error: "is required" })
+  .trim()
+  .min(1, "is required")
+  .url("must be a valid URL")
+  .refine((value) => value.startsWith("https://"), "must use https:// scheme")
+  .transform((value) => value.replace(/\/+$/, ""));
 
 function optionalPositiveNumber(defaultValue: number, max?: number) {
   let schema = z.coerce.number().finite().positive();
@@ -64,44 +59,17 @@ const serverEnvSchema = z
       .default(
         "sinarberkah_session_secret_default_development_key_minimum_32_characters",
       ),
-    STORAGE_PROVIDER: z.preprocess(
-      (value) =>
-        typeof value === "string" && value.trim() === "" ? undefined : value,
-      z.enum(["blob", "r2"]).default("blob"),
-    ),
-    BLOB_READ_WRITE_TOKEN: optionalTrimmedString,
-    R2_ACCESS_KEY_ID: optionalTrimmedString,
-    R2_SECRET_ACCESS_KEY: optionalTrimmedString,
-    R2_ENDPOINT: optionalHttpsUrl,
-    R2_BUCKET_NAME: optionalTrimmedString,
-    R2_PUBLIC_DOMAIN: optionalHttpsUrl,
+    R2_ACCESS_KEY_ID: requiredTrimmedString,
+    R2_SECRET_ACCESS_KEY: requiredTrimmedString,
+    R2_ENDPOINT: requiredHttpsUrl,
+    R2_BUCKET_NAME: requiredTrimmedString,
+    R2_PUBLIC_DOMAIN: requiredHttpsUrl,
     R2_APP_QUOTA_MB: optionalPositiveNumber(2560),
     MAX_UPLOAD_MB: optionalPositiveNumber(4, 4),
     ALLOWED_ORIGINS: z.string().optional(),
     FRONTEND_URL: z.string().optional(),
     REVALIDATE_SECRET: z.string().optional(),
     CRON_SECRET: z.string().optional(),
-  })
-  .superRefine((data, ctx) => {
-    if (data.STORAGE_PROVIDER !== "r2") return;
-
-    const requiredR2Fields = [
-      "R2_ACCESS_KEY_ID",
-      "R2_SECRET_ACCESS_KEY",
-      "R2_ENDPOINT",
-      "R2_BUCKET_NAME",
-      "R2_PUBLIC_DOMAIN",
-    ] as const;
-
-    for (const field of requiredR2Fields) {
-      if (!data[field]) {
-        ctx.addIssue({
-          code: "custom",
-          path: [field],
-          message: "is required when STORAGE_PROVIDER=r2",
-        });
-      }
-    }
   })
   .transform((data) => {
     const uri = data.DATABASE_URI || data.DATABASE_URL || data.POSTGRES_URL;

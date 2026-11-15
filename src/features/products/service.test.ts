@@ -7,12 +7,12 @@ const repo = {
   updateProduct: vi.fn(),
   deleteProduct: vi.fn(),
 };
-const deleteImage = vi.fn();
+const deleteStoredMedia = vi.fn();
 const revalidateFrontend = vi.fn();
 
 vi.mock("@/features/products/repository", () => repo);
-vi.mock("@/lib/storage/blob", () => ({
-  deleteImage: (url: string) => deleteImage(url),
+vi.mock("@/features/uploads/media-storage", () => ({
+  deleteStoredMedia: (url: string) => deleteStoredMedia(url),
 }));
 vi.mock("@/lib/revalidate", () => ({
   revalidateFrontend: (tags: string[]) => revalidateFrontend(tags),
@@ -27,7 +27,7 @@ const admin = {
 };
 const user = { id: "u1", email: "user@sinarberkah.com", role: "user" as const };
 const ID = "0b6c1c0e-5c0a-4a53-9d6e-2f4f6f0a1b2c";
-const OLD = "https://a.public.blob.vercel-storage.com/lama.jpg";
+const OLD = "550e8400-e29b-41d4-a716-446655440001.webp";
 const product = (image_url: string) => ({
   _id: ID,
   name: "Pagar",
@@ -42,7 +42,7 @@ const product = (image_url: string) => ({
 
 beforeEach(() => {
   for (const fn of Object.values(repo)) fn.mockReset();
-  deleteImage.mockReset();
+  deleteStoredMedia.mockReset();
   revalidateFrontend.mockReset();
 });
 
@@ -127,7 +127,7 @@ describe("foto", () => {
   it("foto dihapus saat produk dihapus", async () => {
     repo.deleteProduct.mockResolvedValue(product(OLD));
     await service.deleteProductById(admin, ID);
-    expect(deleteImage).toHaveBeenCalledWith(OLD);
+    expect(deleteStoredMedia).toHaveBeenCalledWith(OLD);
   });
 
   it("foto lama dihapus saat dikosongkan", async () => {
@@ -136,6 +136,6 @@ describe("foto", () => {
       previousImageUrl: OLD,
     });
     await service.updateProductById(admin, ID, { image_url: "" });
-    expect(deleteImage).toHaveBeenCalledWith(OLD);
+    expect(deleteStoredMedia).toHaveBeenCalledWith(OLD);
   });
 });

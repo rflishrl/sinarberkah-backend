@@ -10,7 +10,6 @@ import { purgeExpiredRateLimits } from "@/lib/api/rate-limit";
 import { safeEqual } from "@/lib/crypto";
 import { getServerEnv } from "@/lib/env";
 import { log } from "@/lib/log";
-import { deleteOrphanImages } from "@/lib/storage/blob";
 import { comparableMediaRef, isValidMediaKey } from "@/lib/storage/media-key";
 import { deriveThumbKey } from "@/lib/storage/media-url";
 import { getR2Storage } from "@/lib/storage/provider";
@@ -22,7 +21,6 @@ export interface MediaCleanupResult {
   scanned: number;
   deleted: number;
   r2: { scanned: number; deleted: number };
-  blob: { scanned: number; deleted: number };
   purgedRateLimits: number;
 }
 
@@ -85,8 +83,8 @@ async function cleanupOrphanR2Media(
 }
 
 /**
- * Cleans up orphaned media (R2 pairs tracked in Neon `media_objects` without `ListObjectsV2`,
- * legacy Vercel Blobs during transition) and expired rate limits via Vercel Cron.
+ * Cleans up orphaned R2 media pairs tracked in Neon `media_objects` (without `ListObjectsV2`)
+ * and expired rate limits via Vercel Cron.
  * Validates `Authorization: Bearer <CRON_SECRET>` with constant-time equality check.
  */
 export async function cleanupOrphanMedia(
@@ -104,31 +102,15 @@ export async function cleanupOrphanMedia(
   const referenced = await listReferencedImageUrls();
   const referencedKeys = collectReferencedKeys(referenced);
 
-  const r2Result =
-    env.STORAGE_PROVIDER === "r2" ||
-    (env.R2_ACCESS_KEY_ID &&
-      env.R2_SECRET_ACCESS_KEY &&
-      env.R2_ENDPOINT &&
-      env.R2_BUCKET_NAME)
-      ? await cleanupOrphanR2Media(referencedKeys, olderThan)
-      : { scanned: 0, deleted: 0 };
-
-  let blobResult = { scanned: 0, deleted: 0 };
-  if (env.STORAGE_PROVIDER === "blob" || env.BLOB_READ_WRITE_TOKEN) {
-    blobResult = await deleteOrphanImages(referenced, olderThan);
-  }
+  const r2Result = await cleanupOrphanR2Media(referencedKeys, olderThan);
 
   const result: MediaCleanupResult = {
-    scanned: r2Result.scanned + blobResult.scanned,
-    deleted: r2Result.deleted + blobResult.deleted,
+    scanned: r2Result.scanned,
+    deleted: r2Result.deleted,
     r2: r2Result,
-    blob: blobResult,
     purgedRateLimits,
   };
 
   log("info", "pembersihan media dan rate limit selesai", { ...result });
   return result;
 }
-
-/** Backward-compatible alias for `/api/cron/cleanup-blobs`. */
-export const cleanupOrphanImages = cleanupOrphanMedia;

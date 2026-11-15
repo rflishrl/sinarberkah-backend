@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import {
-  optionalBlobImageUrl,
+  optionalMediaImageUrl,
   optionalText,
   requiredText,
 } from "@/lib/schemas/common";
@@ -19,7 +19,7 @@ const productFields = {
       .min(0, "Harga tidak boleh negatif.")
       .max(1_000_000_000, "Harga terlalu besar."),
   ),
-  image_url: optionalBlobImageUrl,
+  image_url: optionalMediaImageUrl,
   isActive: z.boolean(),
 };
 

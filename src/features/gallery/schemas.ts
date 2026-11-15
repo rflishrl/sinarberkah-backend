@@ -1,12 +1,12 @@
 import { z } from "zod";
 
-import { blobImageUrl, optionalText, requiredText } from "@/lib/schemas/common";
+import { mediaImageUrl, optionalText, requiredText } from "@/lib/schemas/common";
 
 const galleryFields = {
   title: requiredText("Judul", 120),
   type: requiredText("Jenis", 60),
   description: optionalText("Deskripsi", 1000),
-  image_url: blobImageUrl,
+  image_url: mediaImageUrl,
 };
 
 /** Shared validation schema for admin form (client) and POST route (server). */

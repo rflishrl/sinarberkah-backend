@@ -2,13 +2,13 @@
 
 API service and administrative panel for the Sinar Berkah website. Administrators manage products, portfolio projects, and the pattern gallery here, while the public frontend consumes them via the REST API.
 
-Built with TanStack Start, TanStack Router, Vite, Nitro (preset: Vercel), React 19, TypeScript, Tailwind CSS 4, shadcn/ui, TanStack Query 5, react-hook-form with Zod, Neon PostgreSQL (`@neondatabase/serverless`), scrypt password hashing, HMAC-SHA256 session authentication, Cloudflare Turnstile bot verification, Vercel Blob for media storage, Biome for linting and formatting, and Vitest.
+Built with TanStack Start, TanStack Router, Vite, Nitro (preset: Vercel), React 19, TypeScript, Tailwind CSS 4, shadcn/ui, TanStack Query 5, react-hook-form with Zod, Neon PostgreSQL (`@neondatabase/serverless`), scrypt password hashing, HMAC-SHA256 session authentication, Cloudflare Turnstile bot verification, Cloudflare R2 for media storage, Biome for linting and formatting, and Vitest.
 
 ## System Architecture
 
 ```
 Browser -> Frontend (sinarberkah-plato) -> Backend API -> Neon PostgreSQL
-                                                 Photos: Vercel Blob
+                                                 Photos: Cloudflare R2
                                                  Bot Protection: Cloudflare Turnstile
 ```
 
@@ -31,7 +31,7 @@ Layer boundaries are enforced by `bun run check:boundaries`. Client-side compone
 
 - Bun >= 1.4 (or Node.js >= 24)
 - A Neon PostgreSQL database project ([neon.tech](https://neon.tech))
-- A Vercel Blob storage store (optional for local dev, required for photo uploads)
+- A Cloudflare R2 bucket (`sinar-berkah`) with S3 API credentials and public custom domain (required for photo uploads)
 - Cloudflare Turnstile site key and secret key (dummy keys provided for local development)
 
 ### 2. Environment Setup
@@ -52,11 +52,16 @@ Fill in `.env` with your configuration:
 | :---------------------------- | :----------------------------------------------------------------------------------------------------------------- |
 | `DATABASE_URI`                | Neon PostgreSQL connection string (`postgresql://...`). Supports `DATABASE_URL` or `POSTGRES_URL` as fallbacks.    |
 | `SESSION_SECRET`              | 64+ character random secret string used to sign HMAC-SHA256 session cookies.                                       |
-| `BLOB_READ_WRITE_TOKEN`       | Vercel Blob token for photo uploads. Automatically provided in Vercel deployments.                                 |
+| `R2_ACCESS_KEY_ID`            | Cloudflare R2 S3-compatible access key ID (scoped to the `sinar-berkah` bucket).                                |
+| `R2_SECRET_ACCESS_KEY`        | Cloudflare R2 S3-compatible secret access key.                                                                   |
+| `R2_ENDPOINT`                 | Cloudflare R2 S3 API endpoint (`https://<ACCOUNT_ID>.r2.cloudflarestorage.com`).                                 |
+| `R2_BUCKET_NAME`              | Cloudflare R2 bucket name (`sinar-berkah`).                                                                      |
+| `R2_PUBLIC_DOMAIN`            | Custom public CDN domain for R2 media (e.g. `https://media-sb.raflisahrul.my.id`).                               |
+| `R2_APP_QUOTA_MB`             | Optional application media storage quota in MB for monitoring alerts (default `2560`).                           |
 | `ALLOWED_ORIGINS`             | Comma-separated list of allowed frontend origins for CORS.                                                         |
 | `FRONTEND_URL`                | Public frontend URL. The backend triggers on-demand revalidation here on content updates.                          |
 | `REVALIDATE_SECRET`           | Shared secret token for frontend cache revalidation.                                                               |
-| `CRON_SECRET`                 | Secret token used by Vercel Cron to trigger daily orphaned blob cleanup.                                           |
+| `CRON_SECRET`                 | Secret token used by Vercel Cron to trigger daily orphaned media cleanup.                                          |
 | `TURNSTILE_SECRET_KEY`        | Server-only secret key for Cloudflare Siteverify. Use `1x0000000000000000000000000000000AA` for local development. |
 | `VITE_TURNSTILE_SITE_KEY`     | Public client site key for Turnstile widget. Use `1x00000000000000000000AA` for local development.                 |
 | `TURNSTILE_ALLOWED_HOSTNAMES` | Comma-separated hostnames allowed during verification (e.g. `localhost,127.0.0.1,example.com`).                    |
@@ -123,7 +128,7 @@ All API responses follow a uniform JSON envelope: `{ "success": true, "data": ..
 | GET, POST          | `/api/admin/patterns`            | Admin              | List all pattern items or create a new item                                     |
 | GET, PATCH, DELETE | `/api/admin/patterns/{id}`       | Admin              | Retrieve, update, or delete a pattern item                                      |
 | POST               | `/api/admin/revalidate/test`     | Admin              | Test frontend cache revalidation webhook                                        |
-| GET                | `/api/cron/cleanup-blobs`        | Cron               | Scheduled orphaned Vercel Blob media cleanup                                    |
+| GET                | `/api/cron/cleanup-media`        | Cron               | Scheduled orphaned R2 media cleanup                                             |
 | POST               | `/api/upload`                    | Admin              | Upload an image (JPG, PNG, or WebP, up to 4 MB)                                 |
 | GET                | `/api/health`                    | Public             | Service health and database connectivity check                                  |
 
@@ -174,7 +179,7 @@ For production environments, configure these additional edge protections in Verc
    | `FRONTEND_URL`                | `https://yourdomain.com`              | `http://localhost:3000`                                   |
    | `REVALIDATE_SECRET`           | Shared random secret                  | Shared random secret                                      |
 
-3. In Project Settings > Storage, create or connect a Vercel Blob store (automatically sets `BLOB_READ_WRITE_TOKEN`).
+3. Configure Cloudflare R2 bucket (`sinar-berkah`) with a custom domain and set `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_ENDPOINT`, `R2_BUCKET_NAME`, and `R2_PUBLIC_DOMAIN` in Environment Variables (see `docs/r2-notes.md`).
 4. Set Build Command to `bun run build` and Output Directory to `.vercel/output` (Nitro handles packaging automatically).
 5. Run `bun run db:push` once to ensure database tables are initialized.
 6. Trigger a deployment. Note: if you change `VITE_TURNSTILE_SITE_KEY` later, trigger a redeploy with build cache disabled because client environment variables are embedded at build time.

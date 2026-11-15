@@ -156,7 +156,7 @@ function StatCard({
 }
 
 function DashboardPage() {
-  const { counts, blobReady } = Route.useLoaderData();
+  const { counts, storageReady } = Route.useLoaderData();
 
   return (
     <div className="space-y-8">
@@ -175,14 +175,14 @@ function DashboardPage() {
         </div>
       </div>
 
-      {!blobReady && (
+      {!storageReady && (
         <Alert variant="destructive">
           <AlertTriangleIcon className="size-4" aria-hidden="true" />
           <AlertTitle>Perhatian Penyimpanan Foto</AlertTitle>
           <AlertDescription>
-            Penyimpanan foto belum aktif karena{" "}
-            <code>BLOB_READ_WRITE_TOKEN</code> belum diisi. Anda masih bisa
-            menambah data dengan menempel URL foto.
+            Penyimpanan media Cloudflare R2 belum dikonfigurasi lengkap.
+            Lengkapi variabel <code>R2_*</code> di server agar unggah foto
+            berfungsi.
           </AlertDescription>
         </Alert>
       )}

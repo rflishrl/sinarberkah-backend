@@ -91,11 +91,10 @@ describe("getPublicMediaUrl & getPublicThumbUrl", () => {
     );
   });
 
-  it("supports legacy http(s) URLs (dual-read) and empty values", () => {
-    const legacy =
-      "https://m6pmrghaaiznqnan.public.blob.vercel-storage.com/sinarberkah/products/a.jpg";
-    expect(getPublicMediaUrl(legacy)).toBe(legacy);
-    expect(getPublicThumbUrl(legacy)).toBe(legacy);
+  it("supports empty values and http(s) URLs cleanly", () => {
+    const externalUrl = "https://cdn.example.com/sinarberkah/products/a.webp";
+    expect(getPublicMediaUrl(externalUrl)).toBe(externalUrl);
+    expect(getPublicThumbUrl(externalUrl)).toBe(externalUrl);
     expect(getPublicMediaUrl("")).toBe("");
     expect(getPublicThumbUrl("")).toBe("");
   });
@@ -115,9 +114,6 @@ describe("getPublicMediaUrl & getPublicThumbUrl", () => {
     expect(normalizeMediaInputForStorage(`${VALID_UUID}.webp`)).toBe(
       `${VALID_UUID}.webp`,
     );
-    const legacy =
-      "https://m6pmrghaaiznqnan.public.blob.vercel-storage.com/sinarberkah/products/a.jpg";
-    expect(normalizeMediaInputForStorage(legacy)).toBe(legacy);
     expect(() =>
       normalizeMediaInputForStorage(
         `https://wrong-host.example.com/${VALID_UUID}.webp`,

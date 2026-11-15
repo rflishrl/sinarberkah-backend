@@ -7,12 +7,12 @@ const repo = {
   updateGalleryItem: vi.fn(),
   deleteGalleryItem: vi.fn(),
 };
-const deleteImage = vi.fn();
+const deleteStoredMedia = vi.fn();
 const revalidateFrontend = vi.fn();
 
 vi.mock("@/features/gallery/repository", () => repo);
-vi.mock("@/lib/storage/blob", () => ({
-  deleteImage: (url: string) => deleteImage(url),
+vi.mock("@/features/uploads/media-storage", () => ({
+  deleteStoredMedia: (url: string) => deleteStoredMedia(url),
 }));
 vi.mock("@/lib/revalidate", () => ({
   revalidateFrontend: (tags: string[]) => revalidateFrontend(tags),
@@ -27,8 +27,8 @@ const admin = {
 };
 const user = { id: "u1", email: "user@sinarberkah.com", role: "user" as const };
 const ID = "0b6c1c0e-5c0a-4a53-9d6e-2f4f6f0a1b2c";
-const OLD = "https://a.public.blob.vercel-storage.com/lama.jpg";
-const NEW = "https://a.public.blob.vercel-storage.com/baru.jpg";
+const OLD = "550e8400-e29b-41d4-a716-446655440001.webp";
+const NEW = "550e8400-e29b-41d4-a716-446655440002.webp";
 const item = (image_url: string) => ({
   _id: ID,
   kind: "pattern" as const,
@@ -43,7 +43,7 @@ const validInput = { title: "Pola Daun", type: "Floral", image_url: NEW };
 
 beforeEach(() => {
   for (const fn of Object.values(repo)) fn.mockReset();
-  deleteImage.mockReset();
+  deleteStoredMedia.mockReset();
   revalidateFrontend.mockReset();
 });
 
@@ -94,7 +94,7 @@ describe("validasi", () => {
     expect(repo.insertGalleryItem).not.toHaveBeenCalled();
   });
 
-  it("foto dari host selain Vercel Blob ditolak", async () => {
+  it("foto dari host selain R2 ditolak", async () => {
     await expect(
       service.createGallery(admin, "pattern", {
         ...validInput,
@@ -147,7 +147,7 @@ describe("aturan bisnis", () => {
     expect(revalidateFrontend).toHaveBeenCalledWith(["gallery"]);
   });
 
-  it("ubah foto: foto lama dihapus dari Blob", async () => {
+  it("ubah foto: foto lama dihapus dari penyimpanan", async () => {
     repo.updateGalleryItem.mockResolvedValue({
       item: item(NEW),
       previousImageUrl: OLD,
@@ -155,7 +155,7 @@ describe("aturan bisnis", () => {
     await service.updateGallery(admin, "pattern", ID, {
       image_url: NEW,
     });
-    expect(deleteImage).toHaveBeenCalledWith(OLD);
+    expect(deleteStoredMedia).toHaveBeenCalledWith(OLD);
   });
 
   it("ubah tanpa ganti foto: foto tidak dihapus", async () => {
@@ -166,7 +166,7 @@ describe("aturan bisnis", () => {
     await service.updateGallery(admin, "pattern", ID, {
       title: "Baru",
     });
-    expect(deleteImage).not.toHaveBeenCalled();
+    expect(deleteStoredMedia).not.toHaveBeenCalled();
   });
 
   it("ubah id yang tidak ada = 404", async () => {
@@ -184,7 +184,7 @@ describe("aturan bisnis", () => {
     await expect(
       service.deleteGallery(admin, "portfolio", ID),
     ).resolves.toMatchObject({ _id: ID });
-    expect(deleteImage).toHaveBeenCalledWith(OLD);
+    expect(deleteStoredMedia).toHaveBeenCalledWith(OLD);
     expect(revalidateFrontend).toHaveBeenCalledWith(["portfolio"]);
   });
 });

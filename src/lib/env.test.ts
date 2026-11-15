@@ -18,20 +18,19 @@ afterEach(() => {
 });
 
 describe("getServerEnv (R2 & storage config)", () => {
-  it("defaults to STORAGE_PROVIDER=blob without requiring R2 variables", () => {
+  it("validates required R2 variables with sensible quota and upload defaults", () => {
     const env = getServerEnv();
-    expect(env.STORAGE_PROVIDER).toBe("blob");
+    expect(env.R2_BUCKET_NAME).toBe("sinar-berkah");
     expect(env.R2_APP_QUOTA_MB).toBe(2560);
     expect(env.MAX_UPLOAD_MB).toBe(4);
   });
 
-  it("fails fast with ConfigError when STORAGE_PROVIDER=r2 is missing credentials", () => {
-    vi.stubEnv("STORAGE_PROVIDER", "r2");
+  it("fails fast with ConfigError when required R2 credentials are missing", () => {
+    vi.stubEnv("R2_ACCESS_KEY_ID", "");
     expect(() => getServerEnv()).toThrow(ConfigError);
   });
 
-  it("validates and normalizes trailing slashes when STORAGE_PROVIDER=r2", () => {
-    vi.stubEnv("STORAGE_PROVIDER", "r2");
+  it("validates and normalizes trailing slashes on R2 URLs", () => {
     vi.stubEnv("R2_ACCESS_KEY_ID", "key-id");
     vi.stubEnv("R2_SECRET_ACCESS_KEY", "secret-key");
     vi.stubEnv("R2_ENDPOINT", "https://acct.r2.cloudflarestorage.com/");
@@ -41,23 +40,17 @@ describe("getServerEnv (R2 & storage config)", () => {
     vi.stubEnv("MAX_UPLOAD_MB", "4");
 
     const env = getServerEnv();
-    expect(env.STORAGE_PROVIDER).toBe("r2");
     expect(env.R2_ENDPOINT).toBe("https://acct.r2.cloudflarestorage.com");
     expect(env.R2_PUBLIC_DOMAIN).toBe("https://media-sb.raflisahrul.my.id");
     expect(env.R2_BUCKET_NAME).toBe("sinar-berkah");
   });
 
   it("rejects non-https R2 URLs and MAX_UPLOAD_MB above 4", () => {
-    vi.stubEnv("STORAGE_PROVIDER", "r2");
-    vi.stubEnv("R2_ACCESS_KEY_ID", "key-id");
-    vi.stubEnv("R2_SECRET_ACCESS_KEY", "secret-key");
     vi.stubEnv("R2_ENDPOINT", "http://acct.r2.cloudflarestorage.com");
-    vi.stubEnv("R2_BUCKET_NAME", "sinar-berkah");
-    vi.stubEnv("R2_PUBLIC_DOMAIN", "https://media-sb.raflisahrul.my.id");
     expect(() => getServerEnv()).toThrow(ConfigError);
 
+    vi.unstubAllEnvs();
     resetServerEnvCache();
-    vi.stubEnv("STORAGE_PROVIDER", "blob");
     vi.stubEnv("MAX_UPLOAD_MB", "5");
     expect(() => getServerEnv()).toThrow(ConfigError);
   });

@@ -21,6 +21,11 @@ export default defineConfig({
       DATABASE_URI: "postgresql://postgres:password@localhost:5432/testdb",
       SESSION_SECRET: "test-session-secret-key-at-least-32-characters-long",
       CRON_SECRET: "cron-secret-untuk-pengujian",
+      R2_ACCESS_KEY_ID: "test-r2-access-key",
+      R2_SECRET_ACCESS_KEY: "test-r2-secret-key",
+      R2_ENDPOINT: "https://test-account.r2.cloudflarestorage.com",
+      R2_BUCKET_NAME: "sinar-berkah",
+      R2_PUBLIC_DOMAIN: "https://media-sb.raflisahrul.my.id",
     },
   },
 });
