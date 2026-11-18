@@ -237,3 +237,25 @@ Diambil menggunakan Playwright Chromium terhadap `sinarberkah-backend` (TanStack
 - **Pembersihan**: `.legacy/`, `biome.json`, `components.json`, `vitest.config.mts`, dan seluruh dependency React/TanStack/Biome/Nitro/Radix telah dihapus (`bun.lock` diperbarui). `scripts/check-boundaries.mjs` sudah disesuaikan ke struktur `#lib/server` + `withApi()`.
 - **Screenshot Before/After**: Tersimpan di `.baseline-screenshots/before/` dan `.baseline-screenshots/after/` (diabaikan di `.gitignore`), termasuk halaman `/login`, `/admin`, `/admin/storage`, `/admin/products*`, `/admin/portfolio*`, `/admin/patterns*` untuk desktop `1440x900` dan mobile `390x844`.
 - **Setting Manual Vercel**: Pastikan Node.js Version di Project Settings Vercel diset ke **24.x** (minimum `>= 22.17`), dan perbarui env publik Turnstile menjadi `PUBLIC_TURNSTILE_SITE_KEY`.
+
+---
+
+## 10. Implementasi Rate Limiter Berlapis (Prompt 2 — Branch `feat/rate-limiter`)
+
+### Ruang Lingkup & Arsitektur (Tanpa Upstash Redis)
+- Sesuai keputusan pemilik repo, rate limiter **tidak memakai Upstash Redis** dan tetap memakai **Neon PostgreSQL (`rate_limits`)** lewat `#lib/server/api/rate-limit.js` (`consumeRateLimit`, `resetRateLimit`, `purgeExpiredRateLimits`, fail-open bila DB gagal).
+- **Endpoint yang diproteksi**:
+  - `POST /api/auth/login`: Honeypot `website` (sukses palsu tanpa menyentuh DB/Turnstile/`login`) -> `consumeRateLimit(RATE_LIMITS.login, '${clientIp}:${email}')` (`rl:sinarberkah:login`, `5` percobaan per `15 m`, mengembalikan `429` + header `Retry-After` sebelum memanggil Cloudflare `siteverify` atau `scryptSync`) -> Zod 4 (`loginSchema`) -> Cloudflare Turnstile -> Auth login (+ `resetRateLimit` saat login berhasil).
+  - `POST /api/upload`: Verifikasi same-origin CSRF (`403`) & autentikasi admin (`401`) di `withApi()` lebih dulu -> `consumeRateLimit(RATE_LIMITS.upload, actor.id)` (`rl:sinarberkah:upload`, `20` request per `1 m`, mengembalikan `429` + `Retry-After`) -> Pipeline `sharp` & Cloudflare R2.
+- `getClientAddress()` SvelteKit diteruskan ke handler lewat `withApi()` (`resolveClientIp` dengan fallback header proxy untuk unit test).
+- Read endpoint (`publicRead` 120/1m, `health` 30/1m) memakai tabel `rate_limits` yang sama, dibersihkan harian oleh `/api/cron/cleanup-media`.
+- `sinarberkah-plato` tidak memiliki form kontak publik (hanya tautan WhatsApp) dan endpoint tulisnya hanya webhook internal `POST /api/revalidate` (Bearer `REVALIDATE_SECRET` via `timingSafeEqual`).
+
+### Dependency & Paket
+- Tidak menambah layanan Redis eksternal (`@upstash/ratelimit` & `@upstash/redis` tidak dipakai / telah dihapus).
+- `zod`: `4.6.7` (API v4 `z.email()`, sudah terpasang).
+
+### Screenshot & Tes Prompt 2
+- Baseline pra/pasca Prompt 2: `.baseline-screenshots/ratelimit-before/` & `.baseline-screenshots/ratelimit-after/`.
+- Tes unit & integrasi: `test/rate-limit.test.ts`, `test/login-api.test.ts`, `test/upload.test.ts`.
+- Tes E2E (`test/e2e.e2e.ts`): verifikasi atribut honeypot `website`, kontainer `.cf-turnstile` di dalam `<form>`, serta rendering error `429` dengan `role="alert"`.

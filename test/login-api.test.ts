@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { AppError } from '#lib/server/api/errors.js';
+import { RATE_LIMITS } from '#lib/server/api/rate-limits.js';
 import { readBody, sameOriginRequest } from './api-helpers.js';
 
 const { mockLogin, mockVerifyTurnstile, mockConsumeRateLimit, mockResetRateLimit } = vi.hoisted(
@@ -46,7 +48,7 @@ beforeEach(() => {
 });
 
 describe('POST /api/auth/login', () => {
-	it('returns 200 for valid admin login and valid Turnstile verification', async () => {
+	it('returns 200 for valid admin login and resets IP+email rate limit', async () => {
 		mockLogin.mockResolvedValue({
 			result: { email: admin.email },
 			setCookieHeader: 'admin_session=tok; Path=/'
@@ -56,18 +58,81 @@ describe('POST /api/auth/login', () => {
 				email: admin.email,
 				password: 'secret-password',
 				turnstileToken: 'valid-turnstile-token'
-			})
+			}),
+			getClientAddress: () => '9.9.9.9'
 		} as never);
 		expect(response.status).toBe(200);
 		expect(await readBody(response)).toEqual({
 			success: true,
 			data: { email: admin.email }
 		});
-		expect(mockVerifyTurnstile).toHaveBeenCalledWith('valid-turnstile-token', 'login', '1.2.3.4');
-		expect(mockResetRateLimit).toHaveBeenCalledWith(expect.anything(), '1.2.3.4');
+		expect(mockConsumeRateLimit).toHaveBeenCalledWith(
+			RATE_LIMITS.login,
+			`9.9.9.9:${admin.email}`,
+			expect.any(String)
+		);
+		expect(mockVerifyTurnstile).toHaveBeenCalledWith('valid-turnstile-token', 'login', '9.9.9.9');
+		expect(mockResetRateLimit).toHaveBeenCalledWith(RATE_LIMITS.login, `9.9.9.9:${admin.email}`);
 	});
 
-	it('returns 422 if turnstileToken is missing or validation fails', async () => {
+	it('returns silent fake success when honeypot website field is filled without calling rate limiter, Turnstile, or login', async () => {
+		const response = await POST({
+			request: loginRequest({
+				email: admin.email,
+				password: 'secret-password',
+				turnstileToken: 'valid-turnstile-token',
+				website: 'https://spam-bot.example'
+			})
+		} as never);
+
+		expect(response.status).toBe(200);
+		expect(await readBody(response)).toEqual({
+			success: true,
+			data: { email: admin.email }
+		});
+		expect(mockConsumeRateLimit).not.toHaveBeenCalled();
+		expect(mockVerifyTurnstile).not.toHaveBeenCalled();
+		expect(mockLogin).not.toHaveBeenCalled();
+	});
+
+	it('returns 429 with Retry-After before calling Turnstile or password auth when rate limited', async () => {
+		mockConsumeRateLimit.mockRejectedValueOnce(
+			new AppError('RATE_LIMITED', 'Terlalu banyak percobaan. Coba lagi dalam 2 menit.', {
+				retryAfterSeconds: 120
+			})
+		);
+
+		const response = await POST({
+			request: loginRequest({
+				email: admin.email,
+				password: 'secret-password',
+				turnstileToken: 'valid-turnstile-token'
+			}),
+			getClientAddress: () => '1.2.3.4'
+		} as never);
+
+		expect(response.status).toBe(429);
+		expect(response.headers.get('retry-after')).toBe('120');
+		expect(await readBody(response)).toEqual({
+			success: false,
+			error: 'Terlalu banyak percobaan. Coba lagi dalam 2 menit.'
+		});
+		expect(mockVerifyTurnstile).not.toHaveBeenCalled();
+		expect(mockLogin).not.toHaveBeenCalled();
+	});
+
+	it('returns 422 if Zod 4 validation fails, turnstileToken is missing, or Turnstile verification fails', async () => {
+		const badEmail = await POST({
+			request: loginRequest({
+				email: 'bukan-email-valid',
+				password: 'secret-password',
+				turnstileToken: 'valid-turnstile-token'
+			})
+		} as never);
+		expect(badEmail.status).toBe(422);
+		expect(mockVerifyTurnstile).not.toHaveBeenCalled();
+		expect(mockLogin).not.toHaveBeenCalled();
+
 		const missing = await POST({
 			request: loginRequest({ email: admin.email, password: 'secret-password' })
 		} as never);

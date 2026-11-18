@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppError } from '#lib/server/api/errors.js';
+import { RATE_LIMITS } from '#lib/server/api/rate-limits.js';
 import { resetServerEnvCache } from '#lib/server/env.js';
 import { readBody, sameOriginRequest } from './api-helpers.js';
 
@@ -109,16 +110,18 @@ afterEach(() => {
 });
 
 describe('POST /api/upload', () => {
-	it('menolak request tanpa sesi admin (401) dan cross-origin (403)', async () => {
+	it('menolak request tanpa sesi admin (401) dan cross-origin (403) sebelum rate limiter', async () => {
 		getCurrentAdmin.mockResolvedValue(null);
 		const file = new File([TINY_PNG], 'foto.png', { type: 'image/png' });
 		const unauth = await POST({ request: makeUploadRequest('products', file) } as never);
 		expect(unauth.status).toBe(401);
+		expect(consumeRateLimit).not.toHaveBeenCalled();
 
 		const csrf = await POST({
 			request: makeUploadRequest('products', file, 'https://evil.example')
 		} as never);
 		expect(csrf.status).toBe(403);
+		expect(consumeRateLimit).not.toHaveBeenCalled();
 	});
 
 	it('mengunggah pasangan WebP full + thumb ke R2, mencatat DB, dan mengembalikan metrics', async () => {
@@ -205,6 +208,7 @@ describe('POST /api/upload', () => {
 
 		vi.clearAllMocks();
 		getCurrentAdmin.mockResolvedValue(ADMIN);
+		consumeRateLimit.mockResolvedValue(undefined);
 		getMediaUsageSummary.mockResolvedValue({
 			totalBytes: 0,
 			totalThumbBytes: 0,
@@ -222,14 +226,15 @@ describe('POST /api/upload', () => {
 		]);
 	});
 
-	it('menolak body bukan multipart dan menerapkan rate limit (429)', async () => {
+	it('menolak body bukan multipart dan menerapkan rate limit per admin (429 + Retry-After)', async () => {
 		const bad = await POST({
 			request: sameOriginRequest('/api/upload', { method: 'POST', json: { x: 1 } })
 		} as never);
 		expect(bad.status).toBe(400);
+		expect(consumeRateLimit).toHaveBeenCalledWith(RATE_LIMITS.upload, ADMIN.id, expect.any(String));
 
 		consumeRateLimit.mockRejectedValueOnce(
-			new AppError('RATE_LIMITED', 'Terlalu banyak permintaan unggahan.', {
+			new AppError('RATE_LIMITED', 'Terlalu banyak percobaan. Coba lagi dalam 1 menit.', {
 				retryAfterSeconds: 60
 			})
 		);
@@ -237,5 +242,6 @@ describe('POST /api/upload', () => {
 		const limited = await POST({ request: makeUploadRequest('products', file) } as never);
 		expect(limited.status).toBe(429);
 		expect(limited.headers.get('retry-after')).toBe('60');
+		expect(putObject).not.toHaveBeenCalled();
 	});
 });

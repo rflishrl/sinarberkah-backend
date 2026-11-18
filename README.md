@@ -13,8 +13,8 @@ Built with **SvelteKit 3** (Svelte 5 runes), **Vite 8**, **`@sveltejs/adapter-ve
 - **Bundler**: Vite 8.x (`vite.config.ts` holds SvelteKit & Vitest configuration)
 - **Package Manager**: Bun 1.4+ (`bun.lock`)
 - **Database**: Neon Serverless PostgreSQL (`@neondatabase/serverless`)
-- **Bot Defense**: Cloudflare Turnstile with fail-closed server validation
-- **Auth & Security**: HMAC-SHA256 signed session cookies, `scrypt` password hashing, database-backed rate limiting, same-origin CSRF verification
+- **Bot Defense**: Cloudflare Turnstile with fail-closed server validation & form honeypot (`website`)
+- **Auth & Security**: HMAC-SHA256 signed session cookies, `scrypt` password hashing, Neon PostgreSQL rate limiting (`rl:sinarberkah`, fail-open), same-origin CSRF verification
 - **Media Storage**: Cloudflare R2 (`aws4fetch` path-style S3 API) + `sharp` dual-variant WebP optimization (`full` <= 1920px & <= 1 MB, `thumb` <= 480px)
 - **Code Hygiene**: ESLint + Prettier (`prettier-plugin-svelte`, `prettier-plugin-tailwindcss`)
 - **Testing**: Vitest 5.x + Playwright
@@ -133,6 +133,22 @@ All API routes wrap handlers with `withApi()` and return `{ "success": true, "da
 
 ---
 
+## Layered Security & Anti-Spam Architecture
+
+To keep the portfolio backend resilient on **Vercel Hobby (free tier)** without adding paid services or external Redis accounts:
+
+1. **Edge Gate (Vercel WAF — 1 Rule)**: Blocks volumetric abuse before serverless functions run.
+2. **Same-Origin CSRF & Auth Gate (`withApi`)**: Rejects cross-origin mutations (`403`) and verifies the HMAC-SHA256 `admin_session` cookie before protected handlers (`401` on `/api/upload`).
+3. **Honeypot (`website`)**: Invisible off-screen input (`tabindex="-1"`, `aria-hidden="true"`, `autocomplete="off"`) on `/login`. Filled submissions return a silent no-op success response without touching Turnstile or PostgreSQL.
+4. **Neon PostgreSQL Rate Limiter (`#lib/server/api/rate-limit.js`, table `rate_limits`)**:
+   - `rl:sinarberkah:login`: max `5` attempts per `15 m` keyed by `${clientIp}:${email}` **before** Turnstile & `scrypt` verification (`429` + `Retry-After`), reset upon valid login.
+   - `rl:sinarberkah:upload`: max `20` requests per `1 m` keyed by `actor.id` **after** admin authentication (`429` + `Retry-After`).
+   - `publicRead` (`120 / 1 m`) & `health` (`30 / 1 m`) share the same atomic Neon `rate_limits` store, purged daily by `/api/cron/cleanup-media`.
+   - Configured with **fail-open** (`log('warn', 'rate limit check skipped', ...)`): if database queries fail, requests proceed to downstream protections rather than causing an outage.
+5. **Cloudflare Turnstile (`siteverify`) + Zod 4 Validation**: Runs after rate limiting on `/login`, failing closed before `scrypt` password verification.
+
+---
+
 ## Deployment to Vercel
 
 1. **Manual Vercel Project Setting required for SvelteKit 3 (`@sveltejs/adapter-vercel` 7.x)**:
@@ -141,6 +157,15 @@ All API routes wrap handlers with `withApi()` and return `{ "success": true, "da
 2. Configure all production and preview environment variables in **Project Settings > Environment Variables** (`PUBLIC_TURNSTILE_SITE_KEY` is static at build time, so redeploy without build cache after changing it).
 3. Run `bun run db:push` once against Neon if tables are not yet created.
 4. Verify `/api/health` and `/admin/storage` after deployment.
+
+### Langkah Manual (Free Tier Dashboard Setup)
+
+1. **Cloudflare Turnstile**:
+   - Buat widget/site di dashboard Cloudflare Turnstile (masukkan domain produksi admin).
+   - Isi `PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`, dan `TURNSTILE_ALLOWED_HOSTNAMES` di Vercel `sinarberkah-backend`.
+2. **Vercel WAF Rate Limiting Rule (1 Rule Hobby Plan)**:
+   - Di Vercel Dashboard project → **Firewall / WAF → Rate Limiting Rules**, buat **1 rule** gabungan untuk request `POST` pada path tulis (`/api/auth/login` dan `/api/upload` di backend; serta `/api/revalidate` di project `sinarberkah-plato` dengan 1 rule WAF masing-masing project Hobby).
+   - Mulai aksi rule dari **Log** selama beberapa hari untuk memantau trafik asli, lalu ubah ke **Deny (`429`)** setelah ambang batas terverifikasi aman.
 
 ---
 

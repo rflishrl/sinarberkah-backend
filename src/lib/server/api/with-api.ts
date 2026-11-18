@@ -22,6 +22,7 @@ interface BaseContext<P> {
 	request: Request;
 	params: P;
 	requestId: string;
+	clientIp: string;
 	cookies?: Cookies;
 }
 
@@ -37,6 +38,19 @@ export interface ApiResult<T> {
 interface RouteContext<P> {
 	params?: Promise<P> | P;
 	cookies?: Cookies;
+	getClientAddress?: () => string;
+}
+
+function resolveClientIp(request: Request, getClientAddress?: () => string): string {
+	if (typeof getClientAddress === 'function') {
+		try {
+			const addr = getClientAddress().trim();
+			if (addr) return addr;
+		} catch {
+			// Adapter/preview may throw if socket/header is unavailable in unit tests.
+		}
+	}
+	return getClientIp(request);
 }
 
 const NO_STORE = 'private, no-store';
@@ -117,7 +131,14 @@ export function withApi<A extends Access, P = Record<string, string>, T = unknow
 	handler: (context: ApiContext<A, P>) => Promise<ApiResult<T>>
 ) {
 	return async (
-		reqOrEvent: Request | { request: Request; params?: Promise<P> | P; cookies?: Cookies },
+		reqOrEvent:
+			| Request
+			| {
+					request: Request;
+					params?: Promise<P> | P;
+					cookies?: Cookies;
+					getClientAddress?: () => string;
+			  },
 		route?: RouteContext<P>
 	): Promise<Response> => {
 		const isEvent =
@@ -131,6 +152,10 @@ export function withApi<A extends Access, P = Record<string, string>, T = unknow
 		const rawParams = isEvent ? (reqOrEvent as { params?: Promise<P> | P }).params : route?.params;
 		const params = (rawParams instanceof Promise ? await rawParams : (rawParams ?? {})) as P;
 		const cookies = isEvent ? (reqOrEvent as { cookies?: Cookies }).cookies : route?.cookies;
+		const getClientAddress = isEvent
+			? (reqOrEvent as { getClientAddress?: () => string }).getClientAddress
+			: route?.getClientAddress;
+		const clientIp = resolveClientIp(request, getClientAddress);
 
 		const requestId = request.headers.get('x-vercel-id') ?? crypto.randomUUID();
 		let response: Response;
@@ -144,7 +169,7 @@ export function withApi<A extends Access, P = Record<string, string>, T = unknow
 				assertSameOrigin(request);
 			}
 			if (options.rateLimit) {
-				await consumeRateLimit(options.rateLimit, getClientIp(request), requestId);
+				await consumeRateLimit(options.rateLimit, clientIp, requestId);
 			}
 
 			let resolved: BaseContext<P> & { actor: Actor | null };
@@ -154,9 +179,9 @@ export function withApi<A extends Access, P = Record<string, string>, T = unknow
 				if (!actor) {
 					throw new AppError('UNAUTHENTICATED', 'Anda harus login sebagai admin.');
 				}
-				resolved = { request, params, requestId, cookies, actor };
+				resolved = { request, params, requestId, clientIp, cookies, actor };
 			} else {
-				resolved = { request, params, requestId, cookies, actor: null };
+				resolved = { request, params, requestId, clientIp, cookies, actor: null };
 			}
 
 			const result = await handler(resolved as unknown as ApiContext<A, P>);

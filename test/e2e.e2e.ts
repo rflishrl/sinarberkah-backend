@@ -3,6 +3,7 @@ import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
 const SCREENSHOT_DIR = path.resolve('.baseline-screenshots/after');
+const RATELIMIT_SHOT_DIR = path.resolve('.baseline-screenshots/ratelimit-after');
 
 async function attachErrorCollectors(page: Page) {
 	const consoleErrors: string[] = [];
@@ -26,7 +27,9 @@ test('public API endpoints, login page, unauthenticated redirect, and 404 page w
 }) => {
 	const { consoleErrors, pageErrors, serverErrors } = await attachErrorCollectors(page);
 	const capture = process.env.CAPTURE_AFTER === '1';
+	const captureRatelimit = process.env.CAPTURE_RATELIMIT === '1' || capture;
 	if (capture) fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
+	if (captureRatelimit) fs.mkdirSync(RATELIMIT_SHOT_DIR, { recursive: true });
 
 	const healthRes = await request.get('/api/health');
 	expect(healthRes.status()).toBe(200);
@@ -49,13 +52,41 @@ test('public API endpoints, login page, unauthenticated redirect, and 404 page w
 	await expect(page.getByRole('heading', { name: /sinar berkah/i })).toBeVisible();
 	await expect(page.locator('#login-email')).toHaveAttribute('autocomplete', 'username');
 	await expect(page.locator('#login-password')).toHaveAttribute('autocomplete', 'current-password');
+
+	const loginForm = page.locator('form');
+	const honeypot = loginForm.locator('input[name="website"]');
+	await expect(honeypot).toHaveCount(1);
+	await expect(honeypot).toHaveAttribute('aria-hidden', 'true');
+	await expect(honeypot).toHaveAttribute('tabindex', '-1');
+	await expect(honeypot).toHaveAttribute('autocomplete', 'off');
+	expect(await honeypot.getAttribute('type')).not.toBe('hidden');
+	await expect(loginForm.locator('.cf-turnstile')).toHaveCount(1);
+
 	await page.evaluate(() => document.fonts.ready);
 
-	if (capture) {
+	if (captureRatelimit) {
 		await page.waitForTimeout(800);
-		await page.screenshot({ path: path.join(SCREENSHOT_DIR, 'login-desktop.png'), fullPage: true });
+		await page.screenshot({
+			path: path.join(RATELIMIT_SHOT_DIR, 'login-desktop.png'),
+			fullPage: true
+		});
+		if (capture) {
+			await page.screenshot({
+				path: path.join(SCREENSHOT_DIR, 'login-desktop.png'),
+				fullPage: true
+			});
+		}
 		await page.setViewportSize({ width: 390, height: 844 });
-		await page.screenshot({ path: path.join(SCREENSHOT_DIR, 'login-mobile.png'), fullPage: true });
+		await page.screenshot({
+			path: path.join(RATELIMIT_SHOT_DIR, 'login-mobile.png'),
+			fullPage: true
+		});
+		if (capture) {
+			await page.screenshot({
+				path: path.join(SCREENSHOT_DIR, 'login-mobile.png'),
+				fullPage: true
+			});
+		}
 	}
 
 	expect(consoleErrors).toEqual([]);
@@ -88,7 +119,9 @@ test('admin login flow and protected pages render when credentials are provided'
 	const password = process.env.E2E_ADMIN_PASSWORD ?? 'admin1234';
 	const { consoleErrors, pageErrors, serverErrors } = await attachErrorCollectors(page);
 	const capture = process.env.CAPTURE_AFTER === '1';
+	const captureRatelimit = process.env.CAPTURE_RATELIMIT === '1' || capture;
 	if (capture) fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
+	if (captureRatelimit) fs.mkdirSync(RATELIMIT_SHOT_DIR, { recursive: true });
 
 	await page.setViewportSize({ width: 1440, height: 900 });
 	await page.goto('/login', { waitUntil: 'load' });
@@ -97,6 +130,28 @@ test('admin login flow and protected pages render when credentials are provided'
 
 	const submitBtn = page.getByRole('button', { name: /^masuk$/i });
 	await submitBtn.waitFor({ state: 'visible' });
+	await expect(submitBtn).toBeEnabled({ timeout: 20_000 });
+
+	// Verifikasi pesan 429 dirender dengan role="alert" sebelum login sungguhan.
+	await page.route('**/api/auth/login', async (route) => {
+		await route.fulfill({
+			status: 429,
+			headers: { 'content-type': 'application/json', 'retry-after': '120' },
+			body: JSON.stringify({
+				success: false,
+				error: 'Terlalu banyak percobaan masuk. Coba lagi nanti.'
+			})
+		});
+	});
+	await submitBtn.click();
+	await expect(page.locator('form [role="alert"]')).toContainText(
+		'Terlalu banyak percobaan masuk. Coba lagi nanti.'
+	);
+	await page.unroute('**/api/auth/login');
+	for (let i = consoleErrors.length - 1; i >= 0; i -= 1) {
+		if (consoleErrors[i]?.includes('status of 429')) consoleErrors.splice(i, 1);
+	}
+
 	await expect(submitBtn).toBeEnabled({ timeout: 20_000 });
 	await submitBtn.click();
 
@@ -118,17 +173,34 @@ test('admin login flow and protected pages render when credentials are provided'
 		const res = await page.goto(route.path, { waitUntil: 'load' });
 		expect(res?.status()).toBe(200);
 		await page.evaluate(() => document.fonts.ready);
-		if (capture) {
+		const isRatelimitShot = captureRatelimit && route.name === 'admin-products-new';
+		if (capture || isRatelimitShot) {
 			await page.waitForTimeout(300);
-			await page.screenshot({
-				path: path.join(SCREENSHOT_DIR, `${route.name}-desktop.png`),
-				fullPage: true
-			});
+			if (capture) {
+				await page.screenshot({
+					path: path.join(SCREENSHOT_DIR, `${route.name}-desktop.png`),
+					fullPage: true
+				});
+			}
+			if (isRatelimitShot) {
+				await page.screenshot({
+					path: path.join(RATELIMIT_SHOT_DIR, `${route.name}-desktop.png`),
+					fullPage: true
+				});
+			}
 			await page.setViewportSize({ width: 390, height: 844 });
-			await page.screenshot({
-				path: path.join(SCREENSHOT_DIR, `${route.name}-mobile.png`),
-				fullPage: true
-			});
+			if (capture) {
+				await page.screenshot({
+					path: path.join(SCREENSHOT_DIR, `${route.name}-mobile.png`),
+					fullPage: true
+				});
+			}
+			if (isRatelimitShot) {
+				await page.screenshot({
+					path: path.join(RATELIMIT_SHOT_DIR, `${route.name}-mobile.png`),
+					fullPage: true
+				});
+			}
 		}
 	}
 

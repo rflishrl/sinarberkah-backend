@@ -108,5 +108,5 @@
 		Widget keamanan gagal dimuat. Muat ulang halaman dan coba lagi.
 	</p>
 {:else}
-	<div class="min-h-[65px]" bind:this={container}></div>
+	<div class="cf-turnstile min-h-[65px]" bind:this={container}></div>
 {/if}

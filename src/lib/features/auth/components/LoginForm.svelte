@@ -9,6 +9,7 @@
 
 	let email = $state('');
 	let password = $state('');
+	let website = $state('');
 	let turnstileToken = $state<string | null>(null);
 	let showPassword = $state(false);
 	let busy = $state(false);
@@ -34,7 +35,8 @@
 		const parsed = loginSchema.safeParse({
 			email,
 			password,
-			turnstileToken: turnstileToken ?? ''
+			turnstileToken: turnstileToken ?? '',
+			website
 		});
 
 		if (!parsed.success) {
@@ -48,6 +50,10 @@
 				}
 			}
 			fieldErrors = nextErrors;
+			if (nextErrors.email || nextErrors.password) {
+				const targetId = nextErrors.email ? 'login-email' : 'login-password';
+				document.getElementById(targetId)?.focus();
+			}
 			return;
 		}
 
@@ -70,6 +76,22 @@
 </script>
 
 <form novalidate onsubmit={handleSubmit} class="space-y-5">
+	<div
+		aria-hidden="true"
+		style="position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden;"
+	>
+		<label for="login-website">Website</label>
+		<input
+			id="login-website"
+			name="website"
+			type="text"
+			bind:value={website}
+			tabindex="-1"
+			autocomplete="off"
+			aria-hidden="true"
+		/>
+	</div>
+
 	{#if serverError}
 		<div
 			bind:this={alertEl}
@@ -87,9 +109,11 @@
 			<label for="login-email" class="text-sm font-medium text-foreground">Email</label>
 			<input
 				id="login-email"
+				name="email"
 				type="email"
 				bind:value={email}
 				autocomplete="username"
+				spellcheck="false"
 				required
 				aria-invalid={Boolean(fieldErrors.email)}
 				aria-describedby={fieldErrors.email ? 'login-email-error' : undefined}
@@ -107,6 +131,7 @@
 			<div class="relative">
 				<input
 					id="login-password"
+					name="password"
 					type={showPassword ? 'text' : 'password'}
 					bind:value={password}
 					autocomplete="current-password"
