@@ -28,3 +28,12 @@ npm-debug.log*
 
 # vercel
 .vercel
+
+# baseline screenshots (Phase 0 / Phase 7)
+.baseline-screenshots/
+
+# sveltekit
+.svelte-kit/
+.legacy/
+test-results/
+playwright-report/

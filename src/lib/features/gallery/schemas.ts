@@ -1,0 +1,32 @@
+import { z } from 'zod';
+
+import { mediaImageUrl, optionalText, requiredText } from '#lib/schemas/common.js';
+
+const galleryFields = {
+	title: requiredText('Judul', 120),
+	type: requiredText('Jenis', 60),
+	description: optionalText('Deskripsi', 1000),
+	image_url: mediaImageUrl
+};
+
+export const galleryCreateSchema = z.object({
+	...galleryFields,
+	description: galleryFields.description.default('')
+});
+
+export const galleryUpdateSchema = z.object(galleryFields).partial();
+
+export type GalleryCreateInput = z.output<typeof galleryCreateSchema>;
+export type GalleryUpdateInput = z.output<typeof galleryUpdateSchema>;
+export type GalleryFormValues = z.input<typeof galleryCreateSchema>;
+
+export interface GalleryItemDto {
+	_id: string;
+	kind: 'portfolio' | 'pattern';
+	title: string;
+	type: string;
+	description: string;
+	image: { image_url: string; thumb_url?: string };
+	createdAt: string;
+	updatedAt: string;
+}
