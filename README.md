@@ -151,9 +151,9 @@ To keep the portfolio backend resilient on **Vercel Hobby (free tier)** without 
 
 ## Deployment to Vercel
 
-1. **Manual Vercel Project Setting required for SvelteKit 3 (`@sveltejs/adapter-vercel` 7.x)**:
-   - Under **Project Settings > Build & Deployment > Node.js Version**, select **24.x** (required: `@sveltejs/adapter-vercel` 7.x drops Node 20 and Edge runtime; Node >= 22.17 is required).
-   - Set **Build Command** to `bun run build`, **Install Command** to `bun install`, and leave **Output Directory** auto-detected (`.vercel/output`).
+1. **Manual Vercel Project Settings required for SvelteKit 3 (`@sveltejs/adapter-vercel` 7.x)**:
+   - Set **Framework Preset** to **`SvelteKit`** with all command overrides (**Build Command**, **Output Directory**, **Install Command**, **Development Command**) **OFF** so Vercel auto-detects `bun.lock` and `.vercel/output`.
+   - Under **Project Settings > Build & Deployment > Node.js Version**, select **`24.x`** (`vite.config.ts` targets `nodejs24.x`; `package.json` omits `engines.node` to avoid Vercel's `Node.Js Version Override` warning).
 2. Configure all production and preview environment variables in **Project Settings > Environment Variables** (`PUBLIC_TURNSTILE_SITE_KEY` is static at build time, so redeploy without build cache after changing it).
 3. Run `bun run db:push` once against Neon if tables are not yet created.
 4. Verify `/api/health` and `/admin/storage` after deployment.
